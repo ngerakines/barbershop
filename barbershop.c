@@ -5,13 +5,8 @@ Copyright (c) 2010 Nick Gerakines <nick at gerakines dot net>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
-/* For inet_ntoa. */
 #include <arpa/inet.h>
-
-/* Required by event.h. */
 #include <sys/time.h>
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -20,26 +15,46 @@ Copyright (c) 2010 Nick Gerakines <nick at gerakines dot net>
 #include <errno.h>
 #include <err.h>
 
-#include "hashmap.c"
+#include "bst.c"
 #include <event.h>
 
 /* Port to listen on. */
 #define SERVER_PORT    8002
 
-#define KEY_MAX_LENGTH (256)
-#define KEY_PREFIX ("somekey")
-#define KEY_COUNT (1024*1024)
-
-typedef struct item_s {
-    char key_string[KEY_MAX_LENGTH];
-    int value;
-} item_t;
-
-map_t items;
-
 struct client {
     struct event ev_read;
 };
+
+SearchTree items;
+
+typedef struct member_el {
+    int item;
+    struct member_el *next;
+};
+
+typedef struct member_el *MemberBucket;
+
+typedef struct bucket_el {
+    int score;
+    int count;
+    MemberBucket members;
+    struct bucket_el *next;
+};
+
+typedef struct bucket_el *ScoreBucket;
+
+ScoreBucket scores;
+
+ScoreBucket PrepScoreBucket(ScoreBucket bucket);
+ScoreBucket initScorePool(int score, int item_id);
+ScoreBucket PurgeThenAddScoreToPool(ScoreBucket bucket, int score, int item_id, int old_score);
+ScoreBucket AddScoreToPool(ScoreBucket bucket, int score, int item_id);
+ScoreBucket AddScoreMember(ScoreBucket bucket, int item);
+ScoreBucket doesPoolExist(ScoreBucket bucket, int score);
+int IsScoreMember(MemberBucket head, int item);
+void DumpScores(ScoreBucket head);
+void DumpMembers(MemberBucket head);
+MemberBucket DeleteMember(MemberBucket head, int item);
 
 int setnonblock(int fd) {
     int flags;
@@ -89,10 +104,16 @@ static size_t tokenize_command(char *command, token_t *tokens, const size_t max_
     return ntokens;
 }
 
+void reply(int fd, char *buffer) {
+    int n = write(fd, buffer, strlen(buffer));
+    if (n < 0 || n < strlen(buffer))
+         printf("ERROR writing to socket");
+}
+
 void on_read(int fd, short ev, void *arg) {
     struct client *client = (struct client *)arg;
     char buf[8196];
-    int len, wlen;
+    int len;
     len = read(fd, buf, sizeof(buf));
     if (len == 0) {
         printf("Client disconnected.\n");
@@ -107,6 +128,7 @@ void on_read(int fd, short ev, void *arg) {
         free(client);
         return;
     }
+    /* This could probably be done better. */
     char* nl;
     nl = strrchr(buf, '\r');
     if (nl) { *nl = '\0'; }
@@ -120,34 +142,27 @@ void on_read(int fd, short ev, void *arg) {
         int item_id = atoi(tokens[KEY_TOKEN].value);
         int score = atoi(tokens[VALUE_TOKEN].value);
 
-        char key_string[KEY_MAX_LENGTH];
-        item_t* item;
-        snprintf(key_string, KEY_MAX_LENGTH, "%s%d", KEY_PREFIX, item_id);
-        int lookup = hashmap_get(items, key_string, (void**)(&item));
-        if (lookup == -3) {
-            item = malloc(sizeof(item_t));
-            snprintf(item->key_string, KEY_MAX_LENGTH, "%s%d", KEY_PREFIX, item_id);
-            item->value = score;
-            hashmap_put(items, item->key_string, item);
-        } else if (lookup == 0) {
-            hashmap_remove(items, item->key_string);
-            item->value += score;
-            hashmap_put(items, item->key_string, item);
+        Position lookup = Find( item_id, items );
+        if (lookup == NULL) {
+            items = Insert(item_id, score, items);
+            scores = AddScoreToPool(scores, score, item_id);
+        } else {
+            int old_score = lookup->score;
+            lookup->score += score;
+            scores = PurgeThenAddScoreToPool(scores, lookup->score, item_id, old_score);
         }
-        printf("(%d) item key %s, value %d\n", lookup, item->key_string, item->value);
-
-        printf("Creating/Incrementing record of %d by/for %d.\n", item_id, score);
+        reply(fd, "OK\n");
     } else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
-        printf("Client wants next item to process.\n");
+        reply(fd, "OK\n");
     } else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "stats") == 0) {
+        printf("Dumping items tree:\n");
+        DumpItems(items);
+        printf("Dumping score buckets:\n");
+        DumpScores(scores);
         printf("Client wants server stats.\n");
+        reply(fd, "OK\n");
     } else {
-        printf("Fuck'em.\n");
-    }
-    /* --- end --- */
-    wlen = write(fd, buf, len);
-    if (wlen < len) {
-        printf("Short write, not all data echoed back to client.\n");
+        reply(fd, "NOOP\n");
     }
 }
 
@@ -174,7 +189,8 @@ void on_accept(int fd, short ev, void *arg) {
 }
 
 int main(int argc, char **argv) {
-    items = hashmap_new();
+    items = MakeEmpty(NULL);
+    scores = PrepScoreBucket(NULL);
     int listen_fd;
     struct sockaddr_in listen_addr;
     int reuseaddr_on = 1;
@@ -194,4 +210,104 @@ int main(int argc, char **argv) {
     event_add(&ev_accept, NULL);
     event_dispatch();
     return 0;
+}
+
+// If the bucket is empty/null, create first and exit
+// If the score pool exists, add member to it
+// if the score pool does not exist, add to create last and exit
+ScoreBucket PurgeThenAddScoreToPool(ScoreBucket bucket, int score, int item_id, int old_score) {
+    ScoreBucket lookup = doesPoolExist(bucket, old_score);
+    lookup->members = DeleteMember(lookup->members, item_id);
+    lookup->members -= 1;
+    return AddScoreToPool(bucket, score, item_id);
+}
+
+ScoreBucket AddScoreToPool(ScoreBucket bucket, int score, int item_id) {
+    if (bucket == NULL) {
+        return initScorePool(score, item_id);
+    }
+    ScoreBucket lookup = doesPoolExist(bucket, score);
+    if (lookup == NULL) {
+        ScoreBucket head = initScorePool(score, item_id);
+        head->next = bucket;
+        return head;
+    }
+    lookup = AddScoreMember(lookup, item_id);
+    return bucket;
+}
+
+ScoreBucket initScorePool(int score, int item_id) {
+    ScoreBucket head = malloc(sizeof(struct bucket_el));
+    head = malloc( sizeof( struct bucket_el ) );
+    if (head == NULL ) {
+        exit(1);
+    } else {
+        MemberBucket member = malloc( sizeof( struct member_el ) );
+        member->item = item_id;
+        member->next = NULL;
+        head->members = member;
+        head->score = score;
+        head->count = 1;
+        head->next = NULL;
+        return head;
+    }
+    return NULL;
+}
+
+ScoreBucket AddScoreMember(ScoreBucket bucket, int item) {
+    if (IsScoreMember(bucket->members, item)) {
+        return bucket;
+    }
+    MemberBucket head = malloc(sizeof(struct member_el));
+    head = malloc( sizeof( struct member_el ) );
+    if (head == NULL ) {
+        exit(1);
+    } else {
+        head->next = bucket->members;
+        head->item = item;
+        bucket->members = head;
+        bucket->count += 1;
+        return bucket;
+    }
+    return NULL;
+}
+
+ScoreBucket PrepScoreBucket(ScoreBucket bucket) {
+    if (bucket != NULL) {
+        free(bucket);
+    }
+    return NULL;
+}
+
+int IsScoreMember(MemberBucket head, int item) {
+    if (head == NULL) { return 0; }
+    if (head->item == item) {return 1; }
+    return IsScoreMember(head->next, item);
+}
+
+ScoreBucket doesPoolExist(ScoreBucket bucket, int score) {
+    if (bucket == NULL) { return NULL; }
+    if (bucket->score == score) { return bucket; }
+    return doesPoolExist(bucket->next, score);
+}
+
+void DumpScores(ScoreBucket head) {
+    if (head == NULL) { return; }
+    printf("Score %d (%d)", head->score, head->count);
+    DumpMembers(head->members);
+    printf("\n");
+    DumpScores(head->next);
+}
+
+void DumpMembers(MemberBucket head) {
+    if (head == NULL) { return; }
+    printf(" %d", head->item);
+    DumpMembers(head->next);
+}
+
+MemberBucket DeleteMember(MemberBucket head, int item) {
+    if (head == NULL) { return NULL; }
+    if (head->item == item) { return head->next; }
+    head->next = DeleteMember(head->next, item);
+    return head;
 }

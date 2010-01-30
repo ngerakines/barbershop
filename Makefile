@@ -10,28 +10,22 @@ ifeq ($(uname_S),SunOS)
   CCLINK?= -ldl -lnsl -lsocket -lm -lpthread
 else
   CFLAGS?= $(OPTIMIZATION) -Wall $(ARCH) $(PROF)
-  CCLINK?= -lm -pthread -levent -lJudy
+  CCLINK?= -lm -pthread -levent
 endif
 CCOPT= $(CFLAGS) $(CCLINK) $(ARCH) $(PROF)
 DEBUG?= -g -rdynamic -ggdb
 
 OBJ = barbershop.o
 CLIOBJ = client.o
-JUDY = judytest.o
 
 PRGNAME = barbershop
 CLIPRGNAME = client
-JUDYNAME = judytest
 
 all: barbershop client
 
 # Deps (use make dep to generate this)
 client.o: client.c
-barbershop.o: barbershop.c hashmap.c
-judytest.o: judytest.c
-
-judytest: $(JUDY)
-	$(CC) -o judytest $(CCOPT) $(DEBUG) $(JUDY)
+barbershop.o: barbershop.c bst.c bst.h
 
 barbershop: $(OBJ)
 	$(CC) -o $(PRGNAME) $(CCOPT) $(DEBUG) $(OBJ)
