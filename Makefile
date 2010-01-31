@@ -15,17 +15,20 @@ endif
 CCOPT= $(CFLAGS) $(CCLINK) $(ARCH) $(PROF)
 DEBUG?= -g -rdynamic -ggdb
 
-OBJ = barbershop.o
+OBJ = barbershop.o bst.o scores.o
 CLIOBJ = client.o
 
 PRGNAME = barbershop
 CLIPRGNAME = client
 
-all: barbershop client
+all: barbershop
 
 # Deps (use make dep to generate this)
 client.o: client.c
-barbershop.o: barbershop.c bst.c bst.h
+barbershop.o: barbershop.c
+bst.o: bst.c bst.h
+scores.o: scores.c scores.h
+benchmark.o: benchmark.c
 
 barbershop: $(OBJ)
 	$(CC) -o $(PRGNAME) $(CCOPT) $(DEBUG) $(OBJ)

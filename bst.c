@@ -1,11 +1,12 @@
 #include "bst.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 struct TreeNode {
     int item;
     int score;
-    SearchTree  left;
-    SearchTree  right;
+    SearchTree left;
+    SearchTree right;
 };
 
 SearchTree MakeEmpty(SearchTree tree) {

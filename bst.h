@@ -1,5 +1,3 @@
-typedef int ElementType;
-
 #ifndef _Tree_H
 #define _Tree_H
 

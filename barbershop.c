@@ -15,66 +15,10 @@ Copyright (c) 2010 Nick Gerakines <nick at gerakines dot net>
 #include <errno.h>
 #include <err.h>
 
-#include "bst.c"
+#include "scores.h"
+#include "bst.h"
+#include "barbershop.h"
 #include <event.h>
-
-/* Port to listen on. */
-#define SERVER_PORT    8002
-
-struct client {
-    struct event ev_read;
-};
-
-SearchTree items;
-
-typedef struct member_el {
-    int item;
-    struct member_el *next;
-};
-
-typedef struct member_el *MemberBucket;
-
-typedef struct bucket_el {
-    int score;
-    int count;
-    MemberBucket members;
-    struct bucket_el *next;
-};
-
-typedef struct bucket_el *ScoreBucket;
-
-ScoreBucket scores;
-
-ScoreBucket PrepScoreBucket(ScoreBucket bucket);
-ScoreBucket initScorePool(int score, int item_id);
-ScoreBucket PurgeThenAddScoreToPool(ScoreBucket bucket, int score, int item_id, int old_score);
-ScoreBucket AddScoreToPool(ScoreBucket bucket, int score, int item_id);
-ScoreBucket AddScoreMember(ScoreBucket bucket, int item);
-ScoreBucket doesPoolExist(ScoreBucket bucket, int score);
-int IsScoreMember(MemberBucket head, int item);
-void DumpScores(ScoreBucket head);
-void DumpMembers(MemberBucket head);
-MemberBucket DeleteMember(MemberBucket head, int item);
-
-int setnonblock(int fd) {
-    int flags;
-    flags = fcntl(fd, F_GETFL);
-    if (flags < 0) { return flags; }
-    flags |= O_NONBLOCK;
-    if (fcntl(fd, F_SETFL, flags) < 0) { return -1; }
-    return 0;
-}
-
-typedef struct token_s {
-    char *value;
-    size_t length;
-} token_t;
-
-#define COMMAND_TOKEN 0
-#define SUBCOMMAND_TOKEN 1
-#define KEY_TOKEN 1
-#define VALUE_TOKEN 2
-#define MAX_TOKENS 8
 
 static size_t tokenize_command(char *command, token_t *tokens, const size_t max_tokens) {
     char *s, *e;
@@ -102,12 +46,6 @@ static size_t tokenize_command(char *command, token_t *tokens, const size_t max_
     tokens[ntokens].length = 0;
     ntokens++;
     return ntokens;
-}
-
-void reply(int fd, char *buffer) {
-    int n = write(fd, buffer, strlen(buffer));
-    if (n < 0 || n < strlen(buffer))
-         printf("ERROR writing to socket");
 }
 
 void on_read(int fd, short ev, void *arg) {
@@ -212,102 +150,17 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-// If the bucket is empty/null, create first and exit
-// If the score pool exists, add member to it
-// if the score pool does not exist, add to create last and exit
-ScoreBucket PurgeThenAddScoreToPool(ScoreBucket bucket, int score, int item_id, int old_score) {
-    ScoreBucket lookup = doesPoolExist(bucket, old_score);
-    lookup->members = DeleteMember(lookup->members, item_id);
-    lookup->members -= 1;
-    return AddScoreToPool(bucket, score, item_id);
+int setnonblock(int fd) {
+    int flags;
+    flags = fcntl(fd, F_GETFL);
+    if (flags < 0) { return flags; }
+    flags |= O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, flags) < 0) { return -1; }
+    return 0;
 }
 
-ScoreBucket AddScoreToPool(ScoreBucket bucket, int score, int item_id) {
-    if (bucket == NULL) {
-        return initScorePool(score, item_id);
-    }
-    ScoreBucket lookup = doesPoolExist(bucket, score);
-    if (lookup == NULL) {
-        ScoreBucket head = initScorePool(score, item_id);
-        head->next = bucket;
-        return head;
-    }
-    lookup = AddScoreMember(lookup, item_id);
-    return bucket;
-}
-
-ScoreBucket initScorePool(int score, int item_id) {
-    ScoreBucket head = malloc(sizeof(struct bucket_el));
-    head = malloc( sizeof( struct bucket_el ) );
-    if (head == NULL ) {
-        exit(1);
-    } else {
-        MemberBucket member = malloc( sizeof( struct member_el ) );
-        member->item = item_id;
-        member->next = NULL;
-        head->members = member;
-        head->score = score;
-        head->count = 1;
-        head->next = NULL;
-        return head;
-    }
-    return NULL;
-}
-
-ScoreBucket AddScoreMember(ScoreBucket bucket, int item) {
-    if (IsScoreMember(bucket->members, item)) {
-        return bucket;
-    }
-    MemberBucket head = malloc(sizeof(struct member_el));
-    head = malloc( sizeof( struct member_el ) );
-    if (head == NULL ) {
-        exit(1);
-    } else {
-        head->next = bucket->members;
-        head->item = item;
-        bucket->members = head;
-        bucket->count += 1;
-        return bucket;
-    }
-    return NULL;
-}
-
-ScoreBucket PrepScoreBucket(ScoreBucket bucket) {
-    if (bucket != NULL) {
-        free(bucket);
-    }
-    return NULL;
-}
-
-int IsScoreMember(MemberBucket head, int item) {
-    if (head == NULL) { return 0; }
-    if (head->item == item) {return 1; }
-    return IsScoreMember(head->next, item);
-}
-
-ScoreBucket doesPoolExist(ScoreBucket bucket, int score) {
-    if (bucket == NULL) { return NULL; }
-    if (bucket->score == score) { return bucket; }
-    return doesPoolExist(bucket->next, score);
-}
-
-void DumpScores(ScoreBucket head) {
-    if (head == NULL) { return; }
-    printf("Score %d (%d)", head->score, head->count);
-    DumpMembers(head->members);
-    printf("\n");
-    DumpScores(head->next);
-}
-
-void DumpMembers(MemberBucket head) {
-    if (head == NULL) { return; }
-    printf(" %d", head->item);
-    DumpMembers(head->next);
-}
-
-MemberBucket DeleteMember(MemberBucket head, int item) {
-    if (head == NULL) { return NULL; }
-    if (head->item == item) { return head->next; }
-    head->next = DeleteMember(head->next, item);
-    return head;
+void reply(int fd, char *buffer) {
+    int n = write(fd, buffer, strlen(buffer));
+    if (n < 0 || n < strlen(buffer))
+         printf("ERROR writing to socket");
 }
