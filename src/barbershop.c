@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include <errno.h>
 #include <err.h>
 #include <time.h>
+#include <syslog.h>
 
 #include "scores.h"
 #include "bst.h"
@@ -117,6 +118,7 @@ void on_read(int fd, short ev, void *arg) {
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
 		int next = GetNextItem(scores);
 		if (next != -1) {
+			syslog (LOG_INFO, "Dispatching item %d", next);
 			app_stats.items_gc -= 1;
 		}
 		char msg[32];
@@ -165,15 +167,19 @@ void on_accept(int fd, short ev, void *arg) {
     }
     event_set(&client->ev_read, client_fd, EV_READ|EV_PERSIST, on_read, client);
     event_add(&client->ev_read, NULL);
+	syslog(LOG_INFO, "Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
     printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 }
 
 int main(int argc, char **argv) {
+	setlogmask(LOG_UPTO (LOG_NOTICE));
+	openlog("barbershop", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+	syslog(LOG_NOTICE, "Starting up under uid %d on 0.0.0.0:%d", getuid(), SERVER_PORT);
 	items = MakeEmpty(NULL);
 	scores = PrepScoreBucket(NULL);
 
 	time(&app_stats.started_at);
-	app_stats.version = "00.01.00";
+	app_stats.version = "0.1.0";
 	app_stats.updates = 0;
 	app_stats.items = 0;
 	app_stats.pools = 0;
@@ -198,6 +204,7 @@ int main(int argc, char **argv) {
     event_set(&ev_accept, listen_fd, EV_READ|EV_PERSIST, on_accept, NULL);
     event_add(&ev_accept, NULL);
     event_dispatch();
+	closelog();
     return 0;
 }
 
