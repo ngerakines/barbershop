@@ -51,7 +51,7 @@ barbershop_OBJECTS = $(am_barbershop_OBJECTS)
 barbershop_LDADD = $(LDADD)
 barbershop_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(barbershop_CFLAGS) \
-	$(CFLAGS) $(barbershop_LDFLAGS) $(LDFLAGS) -o $@
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__depfiles_maybe = depfiles
@@ -181,7 +181,6 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 barbershop_SOURCES = barbershop.c barbershop.h bst.c bst.h scores.c scores.h stats.h
 barbershop_CFLAGS = $(OPTIMIZATION) -Wall $(ARCH) $(PROF)
-barbershop_LDFLAGS = -lm -pthread -levent
 all: all-am
 
 .SUFFIXES:

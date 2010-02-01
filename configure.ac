@@ -20,12 +20,18 @@ AC_PROG_LIBTOOL
 
 # Checks for libraries.
 
+AC_CHECK_LIB([m], [cos])
+AC_CHECK_LIB([pthread], [pthread_create]) 
+
 # This macro is defined in check.m4 and tests if check.h and
 # libcheck.a are installed in your system. It sets CHECK_CFLAGS and
 # CHECK_LIBS accordingly.  
 #  AM_PATH_CHECK([MINIMUM-VERSION,
 #                [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
 AM_PATH_CHECK()
+
+LIBEVENT_URL=http://www.monkey.org/~provos/libevent/
+AC_CHECK_LIB(event, event_set, , [AC_MSG_ERROR(libevent is required.  You can get it from $LIBEVENT_URL)])
 
 # Checks for header files.
 AC_HEADER_STDC

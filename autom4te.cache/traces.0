@@ -2367,20 +2367,23 @@ m4trace:configure.ac:19: -1- m4_pattern_allow([^CPP$])
 m4trace:configure.ac:19: -1- m4_pattern_allow([^CPPFLAGS$])
 m4trace:configure.ac:19: -1- m4_pattern_allow([^CPP$])
 m4trace:configure.ac:19: -1- m4_pattern_allow([^STDC_HEADERS$])
-m4trace:configure.ac:28: -1- AM_PATH_CHECK([])
-m4trace:configure.ac:28: -1- _m4_warn([obsolete], [The macro `AC_TRY_LINK' is obsolete.
+m4trace:configure.ac:23: -1- m4_pattern_allow([^HAVE_LIBM$])
+m4trace:configure.ac:24: -1- m4_pattern_allow([^HAVE_LIBPTHREAD$])
+m4trace:configure.ac:31: -1- AM_PATH_CHECK([])
+m4trace:configure.ac:31: -1- _m4_warn([obsolete], [The macro `AC_TRY_LINK' is obsolete.
 You should run autoupdate.], [/var/tmp/autoconf/autoconf-15~193/SRC/autoconf/lib/autoconf/general.m4:2415: AC_TRY_LINK is expanded from...
 /usr/bin/../share/aclocal/check.m4:132: AM_PATH_CHECK is expanded from...
-configure.ac:28: the top level])
-m4trace:configure.ac:28: -1- m4_pattern_allow([^CHECK_CFLAGS$])
-m4trace:configure.ac:28: -1- m4_pattern_allow([^CHECK_LIBS$])
-m4trace:configure.ac:31: -1- m4_pattern_allow([^STDC_HEADERS$])
-m4trace:configure.ac:37: -1- m4_pattern_allow([^HAVE_MALLOC$])
-m4trace:configure.ac:37: -1- m4_pattern_allow([^HAVE_MALLOC$])
-m4trace:configure.ac:37: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:37: -1- m4_pattern_allow([^malloc$])
-m4trace:configure.ac:46: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:46: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:46: -1- _AC_AM_CONFIG_HEADER_HOOK([$ac_file])
-m4trace:configure.ac:46: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:46: -1- _LT_PROG_LTMAIN
+configure.ac:31: the top level])
+m4trace:configure.ac:31: -1- m4_pattern_allow([^CHECK_CFLAGS$])
+m4trace:configure.ac:31: -1- m4_pattern_allow([^CHECK_LIBS$])
+m4trace:configure.ac:34: -1- m4_pattern_allow([^HAVE_LIBEVENT$])
+m4trace:configure.ac:37: -1- m4_pattern_allow([^STDC_HEADERS$])
+m4trace:configure.ac:43: -1- m4_pattern_allow([^HAVE_MALLOC$])
+m4trace:configure.ac:43: -1- m4_pattern_allow([^HAVE_MALLOC$])
+m4trace:configure.ac:43: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:43: -1- m4_pattern_allow([^malloc$])
+m4trace:configure.ac:52: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:52: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:52: -1- _AC_AM_CONFIG_HEADER_HOOK([$ac_file])
+m4trace:configure.ac:52: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:52: -1- _LT_PROG_LTMAIN
