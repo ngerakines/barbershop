@@ -1,6 +1,6 @@
 # Barbershop Makefile
 # Copyright (C) 2010 Nick Gerakines <nick at gerakines dot net>
-# This file is released under the BSD license, see the COPYING file
+# This file is released under the MIT license.
 
 CC=gcc
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
