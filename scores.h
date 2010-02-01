@@ -16,5 +16,6 @@ ScoreBucket doesPoolExist(ScoreBucket bucket, int score);
 void DumpScores(ScoreBucket head);
 void DumpMembers(MemberBucket head);
 MemberBucket DeleteMember(MemberBucket head, int item);
+int GetNextItem(ScoreBucket head);
 
 #endif

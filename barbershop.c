@@ -14,94 +14,118 @@ Copyright (c) 2010 Nick Gerakines <nick at gerakines dot net>
 #include <fcntl.h>
 #include <errno.h>
 #include <err.h>
+#include <time.h>
 
 #include "scores.h"
 #include "bst.h"
 #include "barbershop.h"
+#include "stats.h"
 #include <event.h>
 
 static size_t tokenize_command(char *command, token_t *tokens, const size_t max_tokens) {
-    char *s, *e;
-    size_t ntokens = 0;
-    for (s = e = command; ntokens < max_tokens - 1; ++e) {
-        if (*e == ' ') {
-            if (s != e) {
-                tokens[ntokens].value = s;
-                tokens[ntokens].length = e - s;
-                ntokens++;
-                *e = '\0';
-            }
-            s = e + 1;
-        }
-        else if (*e == '\0') {
-            if (s != e) {
-                tokens[ntokens].value = s;
-                tokens[ntokens].length = e - s;
-                ntokens++;
-            }
-            break; /* string end */
-        }
-    }
-    tokens[ntokens].value =  *e == '\0' ? NULL : e;
-    tokens[ntokens].length = 0;
-    ntokens++;
-    return ntokens;
+	char *s, *e;
+	size_t ntokens = 0;
+	for (s = e = command; ntokens < max_tokens - 1; ++e) {
+		if (*e == ' ') {
+			if (s != e) {
+				tokens[ntokens].value = s;
+				tokens[ntokens].length = e - s;
+				ntokens++;
+				*e = '\0';
+			}
+			s = e + 1;
+		} else if (*e == '\0') {
+			if (s != e) {
+				tokens[ntokens].value = s;
+				tokens[ntokens].length = e - s;
+				ntokens++;
+			}
+			break;
+		}
+	}
+	tokens[ntokens].value =  *e == '\0' ? NULL : e;
+	tokens[ntokens].length = 0;
+	ntokens++;
+	return ntokens;
 }
 
+// TODO: Create an actual source file that decomposes input and
+// determines execution.
 void on_read(int fd, short ev, void *arg) {
-    struct client *client = (struct client *)arg;
-    char buf[8196];
-    int len;
-    len = read(fd, buf, sizeof(buf));
-    if (len == 0) {
-        printf("Client disconnected.\n");
-        close(fd);
-        event_del(&client->ev_read);
-        free(client);
-        return;
-    } else if (len < 0) {
-        printf("Socket failure, disconnecting client: %s", strerror(errno));
-        close(fd);
-        event_del(&client->ev_read);
-        free(client);
-        return;
-    }
-    /* This could probably be done better. */
-    char* nl;
-    nl = strrchr(buf, '\r');
-    if (nl) { *nl = '\0'; }
-    nl = strrchr(buf, '\n');
-    if (nl) { *nl = '\0'; }
-    /* Figure out what they want to do. */
-    token_t tokens[MAX_TOKENS];
-    size_t ntokens;
-    ntokens = tokenize_command((char*)buf, tokens, MAX_TOKENS);
-    if (ntokens == 4 && strcmp(tokens[COMMAND_TOKEN].value, "update") == 0) {
-        int item_id = atoi(tokens[KEY_TOKEN].value);
-        int score = atoi(tokens[VALUE_TOKEN].value);
+	struct client *client = (struct client *)arg;
+	// TODO: Find out what a reasonable size limit is on network input.
+	char buf[8196];
+	int len = read(fd, buf, sizeof(buf));
+	if (len == 0) {
+		printf("Client disconnected.\n");
+		close(fd);
+		event_del(&client->ev_read);
+		free(client);
+		return;
+	} else if (len < 0) {
+		printf("Socket failure, disconnecting client: %s", strerror(errno));
+		close(fd);
+		event_del(&client->ev_read);
+		free(client);
+		return;
+	}
+	// TOOD: Find a better way to do this {
+	char* nl;
+	nl = strrchr(buf, '\r');
+	if (nl) { *nl = '\0'; }
+	nl = strrchr(buf, '\n');
+	if (nl) { *nl = '\0'; }
+	// }
+	token_t tokens[MAX_TOKENS];
+	size_t ntokens = tokenize_command((char*)buf, tokens, MAX_TOKENS);
+	// TODO: Add support for the 'quit' command.
+	if (ntokens == 4 && strcmp(tokens[COMMAND_TOKEN].value, "update") == 0) {
+		int item_id = atoi(tokens[KEY_TOKEN].value);
+		int score = atoi(tokens[VALUE_TOKEN].value);
 
-        Position lookup = Find( item_id, items );
-        if (lookup == NULL) {
-            items = Insert(item_id, score, items);
-            scores = AddScoreToPool(scores, score, item_id);
-        } else {
-            int old_score = lookup->score;
-            lookup->score += score;
-            scores = PurgeThenAddScoreToPool(scores, lookup->score, item_id, old_score);
-        }
-        reply(fd, "OK\n");
-    } else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
-        reply(fd, "OK\n");
-    } else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "stats") == 0) {
-        printf("Dumping items tree:\n");
-        DumpItems(items);
-        printf("Dumping score buckets:\n");
-        DumpScores(scores);
-        printf("Client wants server stats.\n");
-        reply(fd, "OK\n");
-    } else {
-        reply(fd, "NOOP\n");
-    }
+		Position lookup = Find( item_id, items );
+		if (lookup == NULL) {
+			items = Insert(item_id, score, items);
+			scores = AddScoreToPool(scores, score, item_id);
+			app_stats.items += 1;
+			app_stats.items_gc += 1;
+		} else {
+			int old_score = lookup->score;
+			lookup->score += score;
+			scores = PurgeThenAddScoreToPool(scores, lookup->score, item_id, old_score);
+		}
+		app_stats.updates += 1;
+		reply(fd, "OK\r\n");
+	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
+		int next = GetNextItem(scores);
+		if (next != -1) {
+			app_stats.items_gc -= 1;
+		}
+		char msg[32];
+		sprintf(msg, "%d\r\n", next);
+		reply(fd, msg);
+	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "stats") == 0) {
+		// TODO: Find out of the stats output buffer can be reduced.
+		char out[128];
+		time_t current_time;
+		time(&current_time);
+		sprintf(out, "STAT uptime %d\r\n", (int)(current_time - app_stats.started_at)); reply(fd, out);
+		sprintf(out, "STAT version %s\r\n", app_stats.version); reply(fd, out);
+		sprintf(out, "STAT updates %d\r\n", app_stats.updates); reply(fd, out);
+		sprintf(out, "STAT items %d\r\n", app_stats.items); reply(fd, out);
+		sprintf(out, "STAT pools %d\r\n", app_stats.pools); reply(fd, out);
+		sprintf(out, "STAT pools_gc %d\r\n", app_stats.pools_gc); reply(fd, out);
+		sprintf(out, "STAT items_gc %d\r\n", app_stats.items_gc); reply(fd, out);
+		reply(fd, "END\r\n");
+		/*
+		printf("Dumping items tree:\n");
+		DumpItems(items);
+		printf("Dumping score buckets:\n");
+		DumpScores(scores);
+		*/
+	} else {
+		reply(fd, "ERROR\r\n");
+	}
 }
 
 void on_accept(int fd, short ev, void *arg) {
@@ -127,8 +151,17 @@ void on_accept(int fd, short ev, void *arg) {
 }
 
 int main(int argc, char **argv) {
-    items = MakeEmpty(NULL);
-    scores = PrepScoreBucket(NULL);
+	items = MakeEmpty(NULL);
+	scores = PrepScoreBucket(NULL);
+
+	time(&app_stats.started_at);
+	app_stats.version = "00.01.00";
+	app_stats.updates = 0;
+	app_stats.items = 0;
+	app_stats.pools = 0;
+	app_stats.items_gc = 0;
+	app_stats.pools_gc = 0;
+
     int listen_fd;
     struct sockaddr_in listen_addr;
     int reuseaddr_on = 1;

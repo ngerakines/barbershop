@@ -25,9 +25,9 @@ all: barbershop
 
 # Deps (use make dep to generate this)
 client.o: client.c
-barbershop.o: barbershop.c
-bst.o: bst.c bst.h
-scores.o: scores.c scores.h
+barbershop.o: barbershop.c stats.h
+bst.o: bst.c bst.h stats.h
+scores.o: scores.c scores.h stats.h
 benchmark.o: benchmark.c
 
 barbershop: $(OBJ)

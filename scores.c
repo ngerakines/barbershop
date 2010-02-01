@@ -1,55 +1,80 @@
 #include "scores.h"
+#include "stats.h"
 #include <stdlib.h>
 #include <stdio.h>
 
 struct member_el {
-    int item;
-    MemberBucket next;
+	int item;
+	MemberBucket next;
 };
 
 struct bucket_el {
-    int score;
-    int count;
-    MemberBucket members;
-    ScoreBucket next;
+	int score;
+	int count;
+	MemberBucket members;
+	ScoreBucket next;
 };
 
+int GetNextItem(ScoreBucket head) {
+	if (head == NULL) { return -1; }
+	if (head->count > 0) {
+		MemberBucket first = head->members;
+		head->members = first->next;
+		// If the pool has no members, decr pools_gc stats to reflect
+		// non-garbage collected pool counts.
+		if (head->members == NULL) {
+			app_stats.pools_gc -= 1;
+		}
+		head->count -= 1;
+		return first->item;
+	}
+	return GetNextItem(head->next);
+}
+
 ScoreBucket PurgeThenAddScoreToPool(ScoreBucket bucket, int score, int item_id, int old_score) {
-    ScoreBucket lookup = doesPoolExist(bucket, old_score);
-    lookup->members = DeleteMember(lookup->members, item_id);
-    lookup->count -= 1;
-    return AddScoreToPool(bucket, score, item_id);
+	ScoreBucket lookup = doesPoolExist(bucket, old_score);
+	lookup->members = DeleteMember(lookup->members, item_id);
+	lookup->count -= 1;
+	if (lookup->members == NULL) {
+		app_stats.pools_gc -= 1;
+	}
+	return AddScoreToPool(bucket, score, item_id);
 }
 
+// TODO: This should be a self-sorting linked-list. All new pools
+// should be injected to retain uniqueness and order.
 ScoreBucket AddScoreToPool(ScoreBucket bucket, int score, int item_id) {
-    if (bucket == NULL) {
-        return initScorePool(score, item_id);
-    }
-    ScoreBucket lookup = doesPoolExist(bucket, score);
-    if (lookup == NULL) {
-        ScoreBucket head = initScorePool(score, item_id);
-        head->next = bucket;
-        return head;
-    }
-    lookup = AddScoreMember(lookup, item_id);
-    return bucket;
+	ScoreBucket lookup = doesPoolExist(bucket, score);
+	if (lookup == NULL) {
+		ScoreBucket head = initScorePool(score, item_id);
+		head->next = bucket;
+		return head;
+	}
+	lookup = AddScoreMember(lookup, item_id);
+	return bucket;
 }
 
+// TODO: Look into merging this into `AddScoreMember/2`
 ScoreBucket initScorePool(int score, int item_id) {
-    ScoreBucket head = malloc(sizeof(ScoreBucket));
-    if (head == NULL ) {
-        exit(1);
-    } else {
-        MemberBucket member = malloc( sizeof(MemberBucket ) );
-        member->item = item_id;
-        member->next = NULL;
-        head->members = member;
-        head->score = score;
-        head->count = 1;
-        head->next = NULL;
-        return head;
-    }
-    return NULL;
+	ScoreBucket head = malloc(sizeof(ScoreBucket));
+	if (head == NULL ) {
+		exit(1);
+	} else {
+		MemberBucket member = malloc( sizeof(MemberBucket ) );
+		member->item = item_id;
+		member->next = NULL;
+		head->members = member;
+		head->score = score;
+		head->count = 1;
+		head->next = NULL;
+		// Do it here we we can effectively see if the pool should be
+		// created for the first time but may not have for one reason
+		// or another.
+		app_stats.pools += 1;
+		app_stats.pools_gc += 1;
+		return head;
+	}
+	return NULL;
 }
 
 ScoreBucket AddScoreMember(ScoreBucket bucket, int item) {
