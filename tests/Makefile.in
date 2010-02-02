@@ -178,7 +178,8 @@ target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 check_barbershop_SOURCES = check_barbershop.c $(top_builddir)/src/scores.c $(top_builddir)/src/scores.h
-check_barbershop_CFLAGS = @CHECK_CFLAGS@ -g -Wall -fprofile-arcs -ftest-coverage
+check_barbershop_CFLAGS = @CHECK_CFLAGS@ -g -Wall
+# -fprofile-arcs -ftest-coverage
 check_barbershop_LDADD = @CHECK_LIBS@
 all: all-am
 

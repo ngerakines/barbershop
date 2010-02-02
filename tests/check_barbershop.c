@@ -1,5 +1,7 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <check.h>
+#include <assert.h>
 #include "../src/scores.h"
 
 struct member_el {
@@ -20,6 +22,7 @@ START_TEST (test_scores_empty) {
 	fail_unless(GetNextItem(bucket_a) == -1, "Empty buckets return no items.");
 } END_TEST
 
+// Assert that counts are maintained while adding.
 START_TEST (test_scores_add) {
 	ScoreBucket bucket_b = PrepScoreBucket(NULL);
 	bucket_b = AddScoreToPool(bucket_b, 1, 5000);
@@ -34,39 +37,51 @@ START_TEST (test_scores_add) {
 	fail_unless(bucket_b->next == NULL, "next goes nowhere.");
 } END_TEST
 
+// Assert insert order is maintained.
 START_TEST (test_scores_add_several) {
-	ScoreBucket bucket_b = PrepScoreBucket(NULL);
-	bucket_b = AddScoreToPool(bucket_b, 1, 5000);
-	bucket_b = AddScoreToPool(bucket_b, 1, 5001);
-	bucket_b = AddScoreToPool(bucket_b, 1, 5002);
-	fail_if(bucket_b->members == NULL, "has members");
-	fail_unless(bucket_b->count == 3, "has count of 0");
-	// TODO: These tests fail because there is a bug in the return order. When
-	// members are added they are added to the head but when `next` is called
-	// they are pulled from the head instead of from the last member of the chain.
-	fail_unless(GetNextItem(bucket_b) == 5000, "Next returns item 5000.");
-	fail_unless(GetNextItem(bucket_b) == 5001, "Next returns item 5001.");
-	fail_unless(GetNextItem(bucket_b) == 5002, "Next returns item 5002.");
-} END_TEST
-
-START_TEST (test_scores_promote) {
 	ScoreBucket bucket_c = PrepScoreBucket(NULL);
 	bucket_c = AddScoreToPool(bucket_c, 1, 5000);
-	// TODO: Assert that item is member 1 of scores head
-	bucket_c = PurgeThenAddScoreToPool(bucket_c, 2, 5000, 1);
-	// TODO: Assert that item is member 1 of scores head
-	// TODO: Assert that head count is 1 and head->next count is 0
-	fail_unless(bucket_c->next->score == 1, "Adding items to new buckets bumps the chain");
-	fail_unless(bucket_c->score == 2, "Adding items to new buckets bumps the chain");
+	bucket_c = AddScoreToPool(bucket_c, 1, 5001);
+	bucket_c = AddScoreToPool(bucket_c, 1, 5002);
+	fail_if(bucket_c->members == NULL, "has members");
+	fail_unless(bucket_c->count == 3, "has count of 3");
+	fail_unless(GetNextItem(bucket_c) == 5000, "Next returns item 5000.");
+	fail_unless(GetNextItem(bucket_c) == 5001, "Next returns item 5001.");
+	fail_unless(GetNextItem(bucket_c) == 5002, "Next returns item 5002.");
+	fail_unless(bucket_c->members == NULL, "has no members left");
+	fail_unless(bucket_c->count == 0, "has count of 0");
+} END_TEST
+
+// Assert promoting ensures accurate counts and membership
+START_TEST (test_scores_promote) {
+	ScoreBucket bucket_d = PrepScoreBucket(NULL);
+	bucket_d = AddScoreToPool(bucket_d, 1, 5000);
+	fail_unless(bucket_d->count == 1, "bucket_d[0] has one item");
+	fail_unless(bucket_d->score == 1, "bucket_d[0] score is 1");
+	bucket_d = PurgeThenAddScoreToPool(bucket_d, 2, 5000, 1);
+
+	fail_unless(IsScoreMember(bucket_d->members, 5000) == 1, "bucket_d[0] has item 5000");
+
+	printf("Dumping score buckets:\n");
+	DumpScores(bucket_d);
+
+	fail_unless(bucket_d->count == 1, "bucket_d[1] has one item");
+	fail_unless(bucket_d->next->count == 0, "bucket_d[0] has no items");
+	fail_unless(bucket_d->score == 2, "bucket_d[0] score is 2");
+	bucket_d = AddScoreToPool(bucket_d, 1, 5001);
+	fail_unless(bucket_d->next->count == 1, "bucket_d[1] has one item");
+
+	fail_unless(GetNextItem(bucket_d) == 5000, "Next returns item 5000.");
+	fail_unless(GetNextItem(bucket_d) == 5001, "Next returns item 5001.");
 } END_TEST
 
 Suite * barbershop_suite(void) {
 	Suite *s = suite_create("Barbershop");
 
 	TCase *tc_core = tcase_create("Core");
-	tcase_add_test(tc_core, test_scores_empty);
-	tcase_add_test(tc_core, test_scores_add);
-	tcase_add_test(tc_core, test_scores_add_several);
+	// tcase_add_test(tc_core, test_scores_empty);
+	// tcase_add_test(tc_core, test_scores_add);
+	// tcase_add_test(tc_core, test_scores_add_several);
 	tcase_add_test(tc_core, test_scores_promote);
 	suite_add_tcase(s, tc_core);
 

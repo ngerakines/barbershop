@@ -39,5 +39,6 @@ void DumpScores(ScoreBucket head);
 void DumpMembers(MemberBucket head);
 MemberBucket DeleteMember(MemberBucket head, int item);
 int GetNextItem(ScoreBucket head);
+MemberBucket ReturnLastMember(MemberBucket head);
 
 #endif
