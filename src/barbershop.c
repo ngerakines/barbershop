@@ -104,19 +104,28 @@ void on_read(int fd, short ev, void *arg) {
 		Position lookup = Find( item_id, items );
 		if (lookup == NULL) {
 			items = Insert(item_id, score, items);
-			scores = AddScoreToPool(scores, score, item_id);
+			scores = promoteItem(scores, score, item_id, -1);
 			app_stats.items += 1;
 			app_stats.items_gc += 1;
 		} else {
 			int old_score = lookup->score;
-			lookup->score += score;
-			scores = PurgeThenAddScoreToPool(scores, lookup->score, item_id, old_score);
+			if (old_score == -1) {
+				lookup->score = 1;
+			} else {
+				lookup->score += score;
+			}
+			scores = promoteItem(scores, lookup->score, item_id, old_score);
 		}
 		app_stats.updates += 1;
 		reply(fd, "OK\r\n");
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
-		int next = GetNextItem(scores);
+		int next = -1;
+		scores = NextItem(scores, next);
 		if (next != -1) {
+			Position lookup = Find( next, items );
+			if (lookup != NULL) {
+				lookup->score = -1;
+			}
 			app_stats.items_gc -= 1;
 		}
 		char msg[32];
@@ -170,7 +179,7 @@ void on_accept(int fd, short ev, void *arg) {
 
 int main(int argc, char **argv) {
 	items = MakeEmpty(NULL);
-	scores = PrepScoreBucket(NULL);
+	scores = NULL;
 
 	time(&app_stats.started_at);
 	app_stats.version = "00.01.00";

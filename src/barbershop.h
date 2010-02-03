@@ -40,25 +40,13 @@ struct TreeNode {
     SearchTree  right;
 };
 
-struct member_el {
-    int item;
-    MemberBucket next;
-};
-
-struct bucket_el {
-    int score;
-    int count;
-    MemberBucket members;
-    ScoreBucket next;
-};
-
 typedef struct token_s {
     char *value;
     size_t length;
 } token_t;
 
 SearchTree items;
-ScoreBucket scores;
+PoolNode *scores;
 
 static size_t tokenize_command(char *command, token_t *tokens, const size_t max_tokens);
 void on_read(int fd, short ev, void *arg);

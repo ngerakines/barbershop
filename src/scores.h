@@ -23,22 +23,40 @@ THE SOFTWARE.
 #ifndef __SCORES_H__
 #define __SCORES_H__
 
-struct member_el;
-struct bucket_el;
-typedef struct member_el *MemberBucket;
-typedef struct bucket_el *ScoreBucket;
+typedef struct node_member {
+	int item;
+	struct node_member *next;
+} MemberNode;
 
-ScoreBucket PurgeThenAddScoreToPool(ScoreBucket bucket, int score, int item_id, int old_score);
-ScoreBucket AddScoreToPool(ScoreBucket bucket, int score, int item_id);
-ScoreBucket initScorePool(int score, int item_id);
-ScoreBucket AddScoreMember(ScoreBucket bucket, int item);
-ScoreBucket PrepScoreBucket(ScoreBucket bucket);
-int IsScoreMember(MemberBucket head, int item);
-ScoreBucket doesPoolExist(ScoreBucket bucket, int score);
-void DumpScores(ScoreBucket head);
-void DumpMembers(MemberBucket head);
-MemberBucket DeleteMember(MemberBucket head, int item);
-int GetNextItem(ScoreBucket head);
-MemberBucket ReturnLastMember(MemberBucket head);
+typedef struct node_pool {
+	int score;
+	struct node_member *members;
+	int count;
+	struct node_pool *next;
+} PoolNode;
+
+PoolNode *pool_create(int score);
+PoolNode *pool_insert_after(PoolNode *node, int score);
+PoolNode *pool_push(PoolNode *list, int score);
+int pool_remove(PoolNode *list, PoolNode *node);
+int pool_foreach(PoolNode *node, int(*func)(int, MemberNode*));
+PoolNode *pool_find(PoolNode *node, int(*func)(int, MemberNode*,void*), void *data);
+
+MemberNode *member_create(int item);
+MemberNode *member_push(MemberNode *list, int item);
+int member_remove(MemberNode *list, MemberNode *node);
+int member_foreach(MemberNode *node, int(*func)(int));
+MemberNode *member_find(MemberNode *node, int(*func)(int, void*), void *item);
+MemberNode *member_last(MemberNode *node);
+
+int find_by_score(int score, MemberNode *members, void *query);
+int find_item(int item, void *query);
+
+int pool_print(int score, MemberNode *members);
+int member_print(int item);
+
+int preparePromotion(PoolNode *list, int item, int score);
+PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score);
+PoolNode *NextItem(PoolNode *list, int *next_item);
 
 #endif

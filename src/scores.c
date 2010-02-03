@@ -26,150 +26,253 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <stdio.h>
 
-struct member_el {
-	int item;
-	MemberBucket next;
-};
-
-struct bucket_el {
-	int score;
-	int count;
-	MemberBucket members;
-	ScoreBucket next;
-};
-
-int GetNextItem(ScoreBucket head) {
-	if (head == NULL) { return -1; }
-	if (head->count > 0) {
-		// This shouldn't be a two step process, O(n^2) -> 0(n)
-		MemberBucket last = ReturnLastMember(head->members);
-		head->members = DeleteMember(head->members, last->item);
-		// If the pool has no members, decr pools_gc stats to reflect
-		// non-garbage collected pool counts.
-		if (head->members == NULL) {
-			app_stats.pools_gc -= 1;
-		}
-		head->count -= 1;
-		int item_id = last->item;
-		free(last);
-		return item_id;
+PoolNode *pool_create(int score) {
+	PoolNode *node;
+	if (! (node = malloc(sizeof(PoolNode)))) {
+		return NULL;
 	}
-	return GetNextItem(head->next);
+	node->score = score;
+	node->count = 0;
+	node->members = NULL;
+	node->next = NULL;
+	return node;
 }
 
-ScoreBucket PurgeThenAddScoreToPool(ScoreBucket bucket, int score, int item_id, int old_score) {
-	ScoreBucket lookup = doesPoolExist(bucket, old_score);
-	lookup->members = DeleteMember(lookup->members, item_id);
-	assert(IsScoreMember(lookup->members, item_id) == 0);
-	lookup->count -= 1;
-	if (lookup->members == NULL) {
-		app_stats.pools_gc -= 1;
-	}
-	return AddScoreToPool(bucket, score, item_id);
+// XXX: Unused, to be removed.
+PoolNode *pool_insert_after(PoolNode *node, int score) {
+	PoolNode *newnode;
+	newnode = pool_create(score);
+	newnode->next = node->next;
+	node->next = newnode;
+	return newnode;
 }
 
-// TODO: This should be a self-sorting linked-list. All new pools
-// should be injected to retain uniqueness and order.
-ScoreBucket AddScoreToPool(ScoreBucket bucket, int score, int item_id) {
-	printf("Adding %d to pool %d\n", item_id, score);
-	ScoreBucket lookup = doesPoolExist(bucket, score);
-	if (lookup == NULL) {
-		ScoreBucket head = initScorePool(score, item_id);
-		assert(IsScoreMember(head->members, item_id) == 1);
-		head->next = bucket;
-		return head;
-	}
-	lookup = AddScoreMember(lookup, item_id);
-	assert(IsScoreMember(lookup->members, item_id) == 1);
-	return lookup;
+PoolNode *pool_push(PoolNode *list, int score) {
+	PoolNode *newnode;
+	newnode = pool_create(score);
+	newnode->next = list;
+	return newnode;
 }
 
-// TODO: Look into merging this into `AddScoreMember/2`
-ScoreBucket initScorePool(int score, int item_id) {
-	ScoreBucket head = malloc(sizeof(ScoreBucket));
-	if (head == NULL ) {
-		exit(1);
+int pool_remove(PoolNode *list, PoolNode *node) {
+	while (list->next && list->next != node) {
+		list = list->next;
+	}
+	if (list->next) {
+		list->next = node->next;
+		free(node);
+		return 0;
 	} else {
-		MemberBucket member = malloc(sizeof(MemberBucket));
-		member->item = item_id;
-		member->next = NULL;
-		head->members = member;
-		head->score = score;
-		head->count = 1;
-		// Do it here we we can effectively see if the pool should be
-		// created for the first time but may not have for one reason
-		// or another.
-		app_stats.pools += 1;
-		app_stats.pools_gc += 1;
-		return head;
+		return -1;
+	}
+}
+
+int pool_foreach(PoolNode *node, int(*func)(int, MemberNode*)) {
+	while (node) {
+		if (func(node->score, node->members) != 0) {
+			return -1;
+		}
+		node = node->next;
+	}
+	return 0;
+}
+
+PoolNode *pool_find(PoolNode *node, int(*func)(int, MemberNode*,void*), void *data) {
+	while (node) {
+		if (func(node->score, node->members, data) > 0) {
+			return node;
+		}
+		node = node->next;
 	}
 	return NULL;
 }
 
-ScoreBucket AddScoreMember(ScoreBucket bucket, int item) {
-    if (IsScoreMember(bucket->members, item)) {
-        return bucket;
-    }
-    MemberBucket member = malloc(sizeof(MemberBucket));
-    if (member == NULL ) {
-        exit(1);
-    } else {
-        member->next = bucket->members;
-        member->item = item;
-        bucket->members = member;
-        bucket->count += 1;
-        return bucket;
-    }
-    return NULL;
+MemberNode *member_create(int item) {
+	MemberNode *node;
+	if (! (node = malloc(sizeof(MemberNode)))) {
+		return NULL;
+	}
+	node->item = item;
+	node->next = NULL;
+	return node;
 }
 
-ScoreBucket PrepScoreBucket(ScoreBucket bucket) {
-    if (bucket != NULL) {
-        free(bucket);
-    }
-    return NULL;
+MemberNode *member_push(MemberNode *list, int item) {
+	MemberNode *newnode;
+	newnode = member_create(item);
+	newnode->next = list;
+	return newnode;
 }
 
-int IsScoreMember(MemberBucket head, int item) {
-    if (head == NULL) { return 0; }
-    if (head->item == item) {return 1; }
-    return IsScoreMember(head->next, item);
-}
-
-ScoreBucket doesPoolExist(ScoreBucket bucket, int score) {
-    if (bucket == NULL) { return NULL; }
-    if (bucket->score == score) { return bucket; }
-    return doesPoolExist(bucket->next, score);
-}
-
-void DumpScores(ScoreBucket head) {
-    if (head == NULL) { return; }
-    printf("Score %d (%d)", head->score, head->count);
-    DumpMembers(head->members);
-    printf("\n");
-    DumpScores(head->next);
-}
-
-void DumpMembers(MemberBucket head) {
-    if (head == NULL) { return; }
-    printf(" %d", head->item);
-    DumpMembers(head->next);
-}
-
-MemberBucket DeleteMember(MemberBucket head, int item) {
-	if (head == NULL) { return NULL; }
-	if (head->item == item) {
-		return head->next;
+int member_remove(MemberNode *list, MemberNode *node) {
+	while (list->next && list->next != node) {
+		list = list->next;
+	}
+	if (list->next) {
+		list->next = node->next;
+		free(node);
+		return 0;
 	} else {
-		head->next = DeleteMember(head->next, item);
+		return -1;
 	}
-	return head;
 }
 
-MemberBucket ReturnLastMember(MemberBucket head) {
-	assert(head != NULL);
-	if (head->next == NULL) {
-		return head;
+int member_foreach(MemberNode *node, int(*func)(int)) {
+	while (node) {
+		if (func(node->item) != 0) {
+			return -1;
+		}
+		node = node->next;
 	}
-	return ReturnLastMember(head->next);
+	return 0;
 }
+
+MemberNode *member_find(MemberNode *node, int(*func)(int, void*), void *data) {
+	while (node) {
+		if (func(node->item, data) > 0) {
+			return node;
+		}
+		node = node->next;
+	}
+	return NULL;
+}
+
+MemberNode *member_last(MemberNode *node) {
+	while (node) {
+		if (node->next == NULL) {
+			return node;
+		}
+		node = node->next;
+	}
+	return NULL;
+}
+
+int find_by_score(int score, MemberNode *members, void *query) {
+	// printf("find_by_score(%d, NULL, %d)\n", score, query);
+	return score == query;
+}
+
+int find_item(int item, void *query) {
+	// printf("find_item(%d, %d)\n", item, query);
+	return item == query;
+}
+
+int pool_print(int score, MemberNode *members) {
+	printf("Pool %d\n", score);
+	member_foreach(members, member_print);
+	return 0;
+}
+
+int member_print(int item) {
+	printf(" -> item %d\n", item);
+	return 0;
+}
+
+int preparePromotion(PoolNode *list, int item, int score) {
+	// printf("preparePromotion called.\n");
+	PoolNode *listMatch;
+	if ((listMatch = pool_find(list, find_by_score, (void*)score))) {
+		// printf(" => found pool with score %d\n", score);
+		MemberNode *memberMatch;
+		if ((memberMatch = member_find(listMatch->members, find_item, (void*)item))) {
+			// printf(" => found member %d in pool %d\n", item, score);
+			listMatch->count--;
+			member_remove(listMatch->members, memberMatch);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score) {
+	if (old_score != -1) {
+		preparePromotion(list, item, old_score);
+	}
+	// printf("promoteItem called.\n");
+	if (list == NULL) {
+		// printf(" -> list is NULL\n");
+		PoolNode *newPool;
+		newPool = pool_create(score);
+		// printf(" -> Created newPool (score=%d)\n", newPool->score);
+		MemberNode *newMember;
+		newMember = member_create(item);
+		// printf(" -> Created newMember (item=%d)\n", newMember->item);
+		newPool->members = newMember;
+		newPool->count++;
+		return newPool;
+	}
+	PoolNode *listMatch;
+	// printf(" -> looking for score %d.\n", score);
+	if ((listMatch = pool_find(list, find_by_score, (void*)score))) {
+		// printf(" -> score pool exists (score=%d)\n", listMatch->score);
+		MemberNode *memberMatch;
+		if ((memberMatch = member_find(listMatch->members, find_item, (void*)item))) {
+			// printf(" -> item exists in pool\n");
+		} else {
+			// printf(" -> item does not exist in pool\n");
+			assert(listMatch != NULL);
+			assert(listMatch->members != NULL);
+			listMatch->members = member_push(listMatch->members, item);
+			// printf(" -> new member created (item=%d)\n", listMatch->members->item);
+			listMatch->count++;
+			// printf(" -> pool %d has %d members\n", listMatch->score, listMatch->count);
+		}
+		return list;
+	} else {
+		// Score pool doesn't exist
+		// printf(" -> score pool doesn't exist\n");
+		PoolNode *newPool;
+		newPool = pool_create(score);
+		// printf(" -> Created newPool (score=%d)\n", newPool->score);
+		MemberNode *newMember;
+		newMember = member_create(item);
+		// printf(" -> Created newMember (item=%d)\n", newMember->item);
+		newPool->members = newMember;
+		newPool->count++;
+		newPool->next = list;
+		return newPool;
+	}
+	return NULL;
+}
+
+// int NextItem(PoolNode *list) {
+// 	if (! list) { return -1; }
+// 	while (list->next && list->count > 0) {
+// 		list = list->next;
+// 	}
+// 	if (list != NULL && list->members != NULL) {
+// 		MemberNode *last = member_last(list->members);
+// 		int item_id = last->item;
+// 		list->count--;
+// 		if (list->members == 1) {
+// 			free(last);
+// 			list->members = NULL;
+// 		} else {
+// 			member_remove(list->members, last);
+// 		}
+// 		return item_id;
+// 	} else{
+// 		return -1;
+// 	}
+// }
+
+PoolNode *NextItem(PoolNode *list, int *next_item) {
+	if (list == NULL) { next_item = -1; return list; }
+	while (list->next && list->count == 0) {
+		list = list->next;
+	}
+	if (list != NULL && list->members != NULL) {
+		printf("We got this far ...\n");
+		MemberNode *last = member_last(list->members);
+		next_item = last->item;
+		printf("and now ...\n");
+		member_remove(list->members, next_item);
+		printf("and now ...\n");
+		if (list->members != NULL) { printf("first member item is %d\n", list->members->item); }
+		printf("count at %d\n", list->count);
+		list->count--;
+		return list;
+	}
+	return list;
+}
+
