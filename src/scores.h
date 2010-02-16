@@ -36,10 +36,8 @@ typedef struct node_pool {
 } PoolNode;
 
 PoolNode *pool_create(int score);
-PoolNode *pool_insert_after(PoolNode *node, int score);
-PoolNode *pool_push(PoolNode *list, int score);
 int pool_remove(PoolNode *list, PoolNode *node);
-int pool_foreach(PoolNode *node, int(*func)(int, MemberNode*));
+int pool_foreach(PoolNode *node, int(*func)(int, int, MemberNode*));
 PoolNode *pool_find(PoolNode *node, int(*func)(int, MemberNode*,void*), void *data);
 
 MemberNode *member_create(int item);
@@ -52,10 +50,10 @@ MemberNode *member_last(MemberNode *node);
 int find_by_score(int score, MemberNode *members, void *query);
 int find_item(int item, void *query);
 
-int pool_print(int score, MemberNode *members);
+int pool_print(int score, int count, MemberNode *members);
 int member_print(int item);
 
-int preparePromotion(PoolNode *list, int item, int score);
+PoolNode *preparePromotion(PoolNode *head, int item, int score);
 PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score);
 PoolNode *NextItem(PoolNode *list, int *next_item);
 
