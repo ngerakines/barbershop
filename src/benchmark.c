@@ -54,7 +54,7 @@ const int HIGH = 500;
 void send_command(int sd, char *command);
 
 int main(int argc, char **argv) {
-	char *ipaddress;
+	char *ipaddress = "127.0.0.1";
 	int port = 8002;
 
 	int c;
@@ -87,12 +87,8 @@ int main(int argc, char **argv) {
 				abort();
 		}
 	}
-	if (ipaddress == NULL) {
-		ipaddress = "0.0.0.0";
-	}
 
 	struct hostent *hp;
-	struct sockaddr_in sin;
 	struct sockaddr_in pin;
 	int sd;
 
@@ -116,19 +112,18 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-
 	time_t seconds;
 	time(&seconds);
 	srand((unsigned int) seconds);
 
-	int n = 1;
-	int list[1001];
+	int n = 0;
+	int list[1000];
 	while (n < 1000) {
 		list[n] = rand() % (HIGH - LOW + 1) + LOW;
 		n++;
 	}
 
-	n = 1;
+	n = 0;
 	while (n < 1000) {
 		char msg[32];
 		sprintf(msg, "update %d 1\r\n", list[n]);
@@ -138,7 +133,6 @@ int main(int argc, char **argv) {
 	}
 	send_command(sd, "stats\r\n");
 
-	printf("Client-Closing sockfd\n");
 	close(sd);
 
 	return 0;
