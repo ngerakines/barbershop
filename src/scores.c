@@ -61,7 +61,7 @@ int pool_foreach(PoolNode *node, int(*func)(int, int, MemberNode*)) {
 	return 0;
 }
 
-PoolNode *pool_find(PoolNode *node, int(*func)(int, MemberNode*,void*), void *data) {
+PoolNode *pool_find(PoolNode *node, int(*func)(int, MemberNode*, int), int data) {
 	while (node) {
 		if (func(node->score, node->members, data) > 0) {
 			return node;
@@ -111,7 +111,7 @@ int member_foreach(MemberNode *node, int(*func)(int)) {
 	return 0;
 }
 
-MemberNode *member_find(MemberNode *node, int(*func)(int, void*), void *data) {
+MemberNode *member_find(MemberNode *node, int(*func)(int, int), int data) {
 	while (node) {
 		if (func(node->item, data) > 0) {
 			return node;
@@ -131,14 +131,15 @@ MemberNode *member_last(MemberNode *node) {
 	return NULL;
 }
 
-int find_by_score(int score, MemberNode *members, void *query) {
+int find_by_score(int score, MemberNode *members, int query) {
 	return score == query;
 }
 
-int find_item(int item, void *query) {
+int find_item(int item, int query) {
 	return item == query;
 }
 
+#ifdef DEBUG
 int pool_print(int score, int count, MemberNode *members) {
 	printf("Pool %d (count %d)\n", score, count);
 	member_foreach(members, member_print);
@@ -149,6 +150,7 @@ int member_print(int item) {
 	printf(" -> item %d\n", item);
 	return 0;
 }
+#endif
 
 PoolNode *preparePromotion(PoolNode *head, int item, int score) {
 	MemberNode *memberMatch;
@@ -158,17 +160,18 @@ PoolNode *preparePromotion(PoolNode *head, int item, int score) {
 			head->members = memberMatch->next;
 			head->count -= 1;
 		} else {
-			if ((memberMatch = member_find(head->members, find_item, (void*)item))) {
+			if ((memberMatch = member_find(head->members, find_item, item))) {
 				head->count -= 1;
 				assert(member_remove(head->members, memberMatch) == 0);
 			}
 		}
 		if (head->count == 0) {
+			app_stats.pools -= 1;
 			return head->next;
 		}
 	} else {
 		PoolNode *listMatch;
-		if ((listMatch = pool_find(head, find_by_score, (void*)score))) {
+		if ((listMatch = pool_find(head, find_by_score, score))) {
 			if (listMatch->count == 1) {
 				assert(pool_remove(head, listMatch) == 0);
 			} else {
@@ -177,7 +180,7 @@ PoolNode *preparePromotion(PoolNode *head, int item, int score) {
 					listMatch->members = memberMatch->next;
 					listMatch->count -= 1;
 				} else {
-					if ((memberMatch = member_find(listMatch->members, find_item, (void*)item))) {
+					if ((memberMatch = member_find(listMatch->members, find_item, item))) {
 						listMatch->count -= 1;
 						assert(member_remove(listMatch->members, memberMatch) == 0);
 					} else {
@@ -197,8 +200,7 @@ PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score) {
 		list = preparePromotion(list, item, old_score);
 	}
 	if (list == NULL) {
-		PoolNode *newPool;
-		newPool = pool_create(score);
+		PoolNode *newPool = pool_create(score);
 		MemberNode *newMember;
 		newMember = member_create(item);
 		newPool->members = newMember;
@@ -206,12 +208,9 @@ PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score) {
 		return newPool;
 	}
 	PoolNode *listMatch;
-	if ((listMatch = pool_find(list, find_by_score, (void*)score))) {
+	if ((listMatch = pool_find(list, find_by_score, score))) {
 		MemberNode *memberMatch;
-		if ((memberMatch = member_find(listMatch->members, find_item, (void*)item))) {
-		} else {
-			assert(listMatch != NULL);
-			assert(listMatch->members != NULL);
+		if (! (memberMatch = member_find(listMatch->members, find_item, item))) {
 			listMatch->members = member_push(listMatch->members, item);
 			listMatch->count++;
 		}
@@ -220,14 +219,61 @@ PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score) {
 		// Score pool doesn't exist
 		PoolNode *newPool;
 		newPool = pool_create(score);
+		app_stats.pools += 1;
 		MemberNode *newMember;
 		newMember = member_create(item);
 		newPool->members = newMember;
 		newPool->count++;
-		newPool->next = list;
-		return newPool;
+		if (list->score < score) {
+			// The new pool is larger than the head, set as new head
+			newPool->next = list;
+			return newPool;
+		} else if (list->next == NULL && list->score > score) {
+			// There is only one member in the head and the head is larger than score, set head->next to newPool and return head
+			list->next = newPool;
+			return list;
+		} else {
+			// There are more than two items in the list, find where to inject
+			// the new pool ... shit
+			PoolNode *head = list;
+			while (head) {
+				if (score < head->score) {
+					if (head->next == NULL) {
+						head->next = newPool;
+						newPool->next = NULL;
+						break;
+					}
+					if (head->next != NULL && score < head->score && score > head->next->score) {
+						PoolNode *tmp;
+						tmp = head->next;
+						newPool->next = tmp;
+						head->next = newPool;
+						break;
+					}
+				}
+				head = head->next;
+			}
+			return list;
+		}
 	}
 	return NULL;
+}
+
+PoolNode *PeakNext(PoolNode *head, int *next_item) {
+	if (head == NULL) {
+		*next_item = -1;
+		return NULL;
+	}
+	if (head->count == 1) {
+		*next_item = head->members->item;
+		return head->next;
+	} else {
+		MemberNode *last = member_last(head->members);
+		*next_item = last->item;
+		assert(member_remove(head->members, last) == 0);
+		head->count -= 1;
+		return head;
+	}
 }
 
 PoolNode *NextItem(PoolNode *head, int *next_item) {
@@ -235,20 +281,11 @@ PoolNode *NextItem(PoolNode *head, int *next_item) {
 		*next_item = -1;
 		return NULL;
 	}
-	assert(head != NULL);
-	if (head->count == 1)
-	{
-		// If the head has one member then set the next_item to the
-		// members->item value and return head->next
+	if (head->count == 1) {
 		*next_item = head->members->item;
+		app_stats.pools -= 1;
 		return head->next;
-	}
-	else
-	{
-		// If the head has more than one member then
-		// * get the value of the last members->item
-		// * remove the last member of the head->members chain
-		// * return head
+	} else {
 		MemberNode *last = member_last(head->members);
 		*next_item = last->item;
 		assert(member_remove(head->members, last) == 0);

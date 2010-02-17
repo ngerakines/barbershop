@@ -38,23 +38,26 @@ typedef struct node_pool {
 PoolNode *pool_create(int score);
 int pool_remove(PoolNode *list, PoolNode *node);
 int pool_foreach(PoolNode *node, int(*func)(int, int, MemberNode*));
-PoolNode *pool_find(PoolNode *node, int(*func)(int, MemberNode*,void*), void *data);
+PoolNode *pool_find(PoolNode *node, int(*func)(int, MemberNode*, int), int data);
 
 MemberNode *member_create(int item);
 MemberNode *member_push(MemberNode *list, int item);
 int member_remove(MemberNode *list, MemberNode *node);
 int member_foreach(MemberNode *node, int(*func)(int));
-MemberNode *member_find(MemberNode *node, int(*func)(int, void*), void *item);
+MemberNode *member_find(MemberNode *node, int(*func)(int, int), int data);
 MemberNode *member_last(MemberNode *node);
 
-int find_by_score(int score, MemberNode *members, void *query);
-int find_item(int item, void *query);
-
-int pool_print(int score, int count, MemberNode *members);
-int member_print(int item);
+int find_by_score(int score, MemberNode *members, int query);
+int find_item(int item, int query);
 
 PoolNode *preparePromotion(PoolNode *head, int item, int score);
 PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score);
+PoolNode *PeakNext(PoolNode *head, int *next_item);
 PoolNode *NextItem(PoolNode *list, int *next_item);
+
+#ifdef DEBUG
+int pool_print(int score, int count, MemberNode *members);
+int member_print(int item);
+#endif
 
 #endif

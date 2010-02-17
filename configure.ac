@@ -42,6 +42,19 @@ AC_CHECK_HEADERS([stdlib.h])
 # Checks for library functions.
 AC_FUNC_MALLOC
 
+AC_ARG_ENABLE(gcov,
+	      AS_HELP_STRING([--enable-gcov],
+                             [enable test coverage with gcov @<:@default=no@:>@]),
+              [case "${enableval}" in
+                 yes) gcov=true ;;
+                 no)  gcov=false ;;
+                 *)   AC_MSG_ERROR([bad value ${enableval} for --enable-gcov]) ;;
+               esac],
+              [gcov=false])
+
+AM_CONDITIONAL(GCOV, test x"$gcov" = "xtrue")
+
+
 # Output files
 AC_CONFIG_HEADERS([config.h])
 

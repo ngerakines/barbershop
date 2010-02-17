@@ -70,10 +70,9 @@ static size_t tokenize_command(char *command, token_t *tokens, const size_t max_
 
 void on_read(int fd, short ev, void *arg) {
 	struct client *client = (struct client *)arg;
-	char buf[48]; // largest possible command is 'update 2147483647 2147483647'
+	char buf[64]; // largest possible command is 'update 2147483647 2147483647'
 	int len = read(fd, buf, sizeof(buf));
 	if (len == 0) {
-		printf("Client disconnected.\n");
 		close(fd);
 		event_del(&client->ev_read);
 		free(client);
@@ -99,12 +98,18 @@ void on_read(int fd, short ev, void *arg) {
 		int item_id = atoi(tokens[KEY_TOKEN].value);
 		int score = atoi(tokens[VALUE_TOKEN].value);
 
+		// Score should probably be type-checked to assert that it really is
+		// an unsigned 32bit integer.
+		if (score < 1) {
+			reply(fd, "ERROR INVALID SCORE\r\n");
+			return;
+		}
+
 		Position lookup = Find(item_id, items);
 		if (lookup == NULL) {
 			items = Insert(item_id, score, items);
 			scores = promoteItem(scores, score, item_id, -1);
 			app_stats.items += 1;
-			app_stats.items_gc += 1;
 		} else {
 			int old_score = lookup->score;
 			if (old_score == -1) {
@@ -117,6 +122,12 @@ void on_read(int fd, short ev, void *arg) {
 		}
 		app_stats.updates += 1;
 		reply(fd, "OK\r\n");
+	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "peak") == 0) {
+		int next;
+		scores = PeakNext(scores, &next);
+		char msg[32];
+		sprintf(msg, "%d\r\n", next);
+		reply(fd, msg);
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
 		int next;
 		scores = NextItem(scores, &next);
@@ -125,7 +136,7 @@ void on_read(int fd, short ev, void *arg) {
 			if (lookup != NULL) {
 				lookup->score = -1;
 			}
-			app_stats.items_gc -= 1;
+			app_stats.items -= 1;
 		}
 		char msg[32];
 		sprintf(msg, "%d\r\n", next);
@@ -139,8 +150,6 @@ void on_read(int fd, short ev, void *arg) {
 		sprintf(out, "STAT updates %d\r\n", app_stats.updates); reply(fd, out);
 		sprintf(out, "STAT items %d\r\n", app_stats.items); reply(fd, out);
 		sprintf(out, "STAT pools %d\r\n", app_stats.pools); reply(fd, out);
-		sprintf(out, "STAT pools_gc %d\r\n", app_stats.pools_gc); reply(fd, out);
-		sprintf(out, "STAT items_gc %d\r\n", app_stats.items_gc); reply(fd, out);
 		reply(fd, "END\r\n");
 		// pool_foreach(scores, pool_print);
 	} else {
@@ -167,7 +176,6 @@ void on_accept(int fd, short ev, void *arg) {
 	}
 	event_set(&client->ev_read, client_fd, EV_READ|EV_PERSIST, on_read, client);
 	event_add(&client->ev_read, NULL);
-	// printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 }
 
 int main(int argc, char **argv) {
@@ -179,8 +187,6 @@ int main(int argc, char **argv) {
 	app_stats.updates = 0;
 	app_stats.items = 0;
 	app_stats.pools = 0;
-	app_stats.items_gc = 0;
-	app_stats.pools_gc = 0;
 
 	int listen_fd;
 	struct sockaddr_in listen_addr;

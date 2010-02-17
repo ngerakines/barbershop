@@ -68,6 +68,24 @@ START_TEST (test_pools_promote) {
 	fail_unless(next == -1);
 } END_TEST
 
+START_TEST (test_scattered_adds) {
+	PoolNode *e = NULL;
+	e = promoteItem(e, 19, 5000, -1);
+	e = promoteItem(e, 5, 5001, -1);
+	e = promoteItem(e, 7, 5002, -1);
+	e = promoteItem(e, 8, 5001, 5);
+	e = promoteItem(e, 1, 5003, -1);
+	int next = -1;
+	e = NextItem(e, &next);
+	fail_unless(next == 5000);
+	e = NextItem(e, &next);
+	fail_unless(next == 5001);
+	e = NextItem(e, &next);
+	fail_unless(next == 5002);
+	e = NextItem(e, &next);
+	fail_unless(next == 5003);
+} END_TEST
+
 Suite * barbershop_suite(void) {
 	Suite *s = suite_create("Barbershop");
 	TCase *tc_core = tcase_create("Core");
@@ -75,6 +93,7 @@ Suite * barbershop_suite(void) {
 	tcase_add_test(tc_core, test_pools_add);
 	tcase_add_test(tc_core, test_pools_add_several);
 	tcase_add_test(tc_core, test_pools_promote);
+	tcase_add_test(tc_core, test_scattered_adds);
 	suite_add_tcase(s, tc_core);
 	return s;
 }

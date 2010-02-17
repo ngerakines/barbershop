@@ -869,6 +869,8 @@ CPP
 CHECK_CFLAGS
 CHECK_LIBS
 LIBOBJS
+GCOV_TRUE
+GCOV_FALSE
 LTLIBOBJS'
 ac_subst_files=''
       ac_precious_vars='build_alias
@@ -1466,6 +1468,7 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
+  --enable-gcov           enable test coverage with gcov [default=no]
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4259,13 +4262,13 @@ if test "${lt_cv_nm_interface+set}" = set; then
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:4262: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:4265: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:4265: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:4268: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:4268: output\"" >&5)
+  (eval echo "\"\$as_me:4271: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -5376,7 +5379,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5379 "configure"' > conftest.$ac_ext
+  echo '#line 5382 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7223,11 +7226,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7226: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7229: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7230: \$? = $ac_status" >&5
+   echo "$as_me:7233: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7547,11 +7550,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7550: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7553: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7554: \$? = $ac_status" >&5
+   echo "$as_me:7557: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7652,11 +7655,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7655: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7658: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:7659: \$? = $ac_status" >&5
+   echo "$as_me:7662: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -7707,11 +7710,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7710: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7713: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:7714: \$? = $ac_status" >&5
+   echo "$as_me:7717: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -10455,7 +10458,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 10458 "configure"
+#line 10461 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -10555,7 +10558,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 10558 "configure"
+#line 10561 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11790,6 +11793,30 @@ fi
 
 
 
+# Check whether --enable-gcov was given.
+if test "${enable_gcov+set}" = set; then
+  enableval=$enable_gcov; case "${enableval}" in
+                 yes) gcov=true ;;
+                 no)  gcov=false ;;
+                 *)   { { echo "$as_me:$LINENO: error: bad value ${enableval} for --enable-gcov" >&5
+echo "$as_me: error: bad value ${enableval} for --enable-gcov" >&2;}
+   { (exit 1); exit 1; }; } ;;
+               esac
+else
+  gcov=false
+fi
+
+
+ if test x"$gcov" = "xtrue"; then
+  GCOV_TRUE=
+  GCOV_FALSE='#'
+else
+  GCOV_TRUE='#'
+  GCOV_FALSE=
+fi
+
+
+
 # Output files
 ac_config_headers="$ac_config_headers config.h"
 
@@ -11904,6 +11931,13 @@ if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   { { echo "$as_me:$LINENO: error: conditional \"am__fastdepCC\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 echo "$as_me: error: conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${GCOV_TRUE}" && test -z "${GCOV_FALSE}"; then
+  { { echo "$as_me:$LINENO: error: conditional \"GCOV\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+echo "$as_me: error: conditional \"GCOV\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
@@ -12841,10 +12875,12 @@ CPP!$CPP$ac_delim
 CHECK_CFLAGS!$CHECK_CFLAGS$ac_delim
 CHECK_LIBS!$CHECK_LIBS$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
+GCOV_TRUE!$GCOV_TRUE$ac_delim
+GCOV_FALSE!$GCOV_FALSE$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 9; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 11; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
