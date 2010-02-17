@@ -171,15 +171,22 @@ PoolNode *preparePromotion(PoolNode *head, int item, int score) {
 		if ((listMatch = pool_find(head, find_by_score, (void*)score))) {
 			if (listMatch->count == 1) {
 				assert(pool_remove(head, listMatch) == 0);
-				return 1;
 			} else {
-				if ((memberMatch = member_find(listMatch->members, find_item, (void*)item))) {
+				if (listMatch->members->item == item) {
+					memberMatch = listMatch->members;
+					listMatch->members = memberMatch->next;
 					listMatch->count -= 1;
-					assert(member_remove(listMatch->members, memberMatch) == 0);
-					return 1;
+				} else {
+					if ((memberMatch = member_find(listMatch->members, find_item, (void*)item))) {
+						listMatch->count -= 1;
+						assert(member_remove(listMatch->members, memberMatch) == 0);
+					} else {
+						assert(1);
+					}
 				}
-				return 0;
 			}
+		} else {
+			assert(1);
 		}
 	}
 	return head;

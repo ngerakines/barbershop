@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include <errno.h>
 #include <err.h>
 #include <time.h>
+#include <assert.h>
 
 #include "scores.h"
 #include "bst.h"
@@ -101,7 +102,7 @@ void on_read(int fd, short ev, void *arg) {
 		int item_id = atoi(tokens[KEY_TOKEN].value);
 		int score = atoi(tokens[VALUE_TOKEN].value);
 
-		Position lookup = Find( item_id, items );
+		Position lookup = Find(item_id, items);
 		if (lookup == NULL) {
 			items = Insert(item_id, score, items);
 			scores = promoteItem(scores, score, item_id, -1);
@@ -114,13 +115,14 @@ void on_read(int fd, short ev, void *arg) {
 			} else {
 				lookup->score += score;
 			}
+			assert(lookup->score > old_score);
 			scores = promoteItem(scores, lookup->score, item_id, old_score);
 		}
 		app_stats.updates += 1;
 		reply(fd, "OK\r\n");
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
-		int next = -1;
-		scores = NextItem(scores, next);
+		int next;
+		scores = NextItem(scores, &next);
 		if (next != -1) {
 			Position lookup = Find( next, items );
 			if (lookup != NULL) {
@@ -144,12 +146,6 @@ void on_read(int fd, short ev, void *arg) {
 		sprintf(out, "STAT pools_gc %d\r\n", app_stats.pools_gc); reply(fd, out);
 		sprintf(out, "STAT items_gc %d\r\n", app_stats.items_gc); reply(fd, out);
 		reply(fd, "END\r\n");
-		/*
-		printf("Dumping items tree:\n");
-		DumpItems(items);
-		printf("Dumping score buckets:\n");
-		DumpScores(scores);
-		*/
 	} else {
 		reply(fd, "ERROR\r\n");
 	}
