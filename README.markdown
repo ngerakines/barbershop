@@ -140,10 +140,7 @@ integers separated by a colon.
 
 # TODO
 
- * Start running it through memory leak detection tools.
- * Add more info to stats interface.
- * Make fast and lightweight.
- * Clean up the binary search tree interface and make it items specific.
+ * Write tests for random/scattered priorities on inserts (aka 'update 5001 23, update 5002 1, update 5003 50').
+ * Write tests to assert stats are accurate.
+ * Support the 'peak' API command.
  * Add ability to put items into a limbo pool until worker response with a comfirmation message that item has been processed.
- * Create a legit benchmark tool.
- * Add input args to the client tool.
