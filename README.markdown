@@ -1,14 +1,32 @@
 # Barbershop
 
-Barbershop is a fast, lightweight priority queue system for a specific
-use case that is undisclosed. The goal is to create a TCP/IP based
-service that uses libev(ent) to create a shifting priority queue.
+Barbershop is a fast, lightweight priority queue system. The goal is to
+create a dead simple network service with libevent to manage priority
+queue.
 
-Internally a list of items is tracked, each having a priority. Some
-connections to the daemon set/update item priorities while other
-connections want to pop something off of the list based on priority.
+This system doesn't use pqueue, but it probably could be made to do so.
 
-As items are added, the hash of items and priorities is updated.
+# Usage
+
+This application exists to allow priority queue workers to scale out. The
+idea is that for a given dataset (a list of ints), some things need to be
+processed periodical and the order in which they processed may change over
+time. The workers shouldn't have to concern themselves with the why or how
+of a priority change, just which item to process next.
+
+ * Over a period of time, clients send update calls to barbershop.
+
+	update 61231 4
+	update 12353 1
+	update 12342 1
+
+ * Periodically, workers want the next item to be processed.
+
+	next
+
+ * Monitors want to know the state of the system through stat calls.
+
+	stats
 
 # Protocol
 
@@ -95,9 +113,11 @@ After sending the command line the client awaits the reply which may be:
 
 ## Retrieval command
 
-The retrieval commands "next" operates like this:
+The retrieval commands "next" and "peak" operates like this:
 
 	next\r\n
+
+	peak\r\n
 
 After sending the command line the client awaits the reply which may be:
 
@@ -140,7 +160,9 @@ integers separated by a colon.
 
 # TODO
 
- * Write tests for random/scattered priorities on inserts (aka 'update 5001 23, update 5002 1, update 5003 50').
- * Write tests to assert stats are accurate.
- * Support the 'peak' API command.
- * Add ability to put items into a limbo pool until worker response with a comfirmation message that item has been processed.
+ * Add daemonize functionality.
+ * Add command line options for:
+   * ip to bind to
+   * port to bind to
+   * to snapshot or not
+   * snapshot interval
