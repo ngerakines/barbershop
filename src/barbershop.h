@@ -54,4 +54,6 @@ void on_accept(int fd, short ev, void *arg);
 int main(int argc, char **argv);
 int setnonblock(int fd);
 void reply(int fd, char *buffer);
-
+void gc_thread();
+void load_snapshot(char *filename);
+void sync_to_disk(PoolNode *head, char *filename);

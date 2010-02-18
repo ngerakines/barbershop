@@ -34,12 +34,15 @@ THE SOFTWARE.
 #include <err.h>
 #include <time.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "scores.h"
 #include "bst.h"
 #include "barbershop.h"
 #include "stats.h"
 #include <event.h>
+
+pthread_mutex_t scores_mutex;
 
 static size_t tokenize_command(char *command, token_t *tokens, const size_t max_tokens) {
 	char *s, *e;
@@ -108,7 +111,9 @@ void on_read(int fd, short ev, void *arg) {
 		Position lookup = Find(item_id, items);
 		if (lookup == NULL) {
 			items = Insert(item_id, score, items);
+			pthread_mutex_lock(&scores_mutex);
 			scores = promoteItem(scores, score, item_id, -1);
+			pthread_mutex_unlock(&scores_mutex);
 			app_stats.items += 1;
 		} else {
 			int old_score = lookup->score;
@@ -118,19 +123,25 @@ void on_read(int fd, short ev, void *arg) {
 				lookup->score += score;
 			}
 			assert(lookup->score > old_score);
+			pthread_mutex_lock(&scores_mutex);
 			scores = promoteItem(scores, lookup->score, item_id, old_score);
+			pthread_mutex_unlock(&scores_mutex);
 		}
 		app_stats.updates += 1;
 		reply(fd, "OK\r\n");
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "peak") == 0) {
 		int next;
+		pthread_mutex_lock(&scores_mutex);
 		scores = PeakNext(scores, &next);
+		pthread_mutex_unlock(&scores_mutex);
 		char msg[32];
 		sprintf(msg, "%d\r\n", next);
 		reply(fd, msg);
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
 		int next;
+		pthread_mutex_lock(&scores_mutex);
 		scores = NextItem(scores, &next);
+		pthread_mutex_unlock(&scores_mutex);
 		if (next != -1) {
 			Position lookup = Find( next, items );
 			if (lookup != NULL) {
@@ -182,11 +193,16 @@ int main(int argc, char **argv) {
 	items = MakeEmpty(NULL);
 	scores = NULL;
 
+	load_snapshot("barbershop.snapshot");
+
 	time(&app_stats.started_at);
 	app_stats.version = "00.01.00";
 	app_stats.updates = 0;
 	app_stats.items = 0;
 	app_stats.pools = 0;
+	
+	pthread_t garbage_collector;
+    pthread_create(&garbage_collector, NULL, (void *) gc_thread, NULL);
 
 	int listen_fd;
 	struct sockaddr_in listen_addr;
@@ -223,4 +239,62 @@ void reply(int fd, char *buffer) {
 	if (n < 0 || n < strlen(buffer)) {
 		printf("ERROR writing to socket");
 	}
+}
+
+void gc_thread() {
+	while (1) {
+		sleep(60);
+		pthread_mutex_lock(&scores_mutex);
+		sync_to_disk(scores, "barbershop.snapshot");
+		pthread_mutex_unlock(&scores_mutex);
+	}
+	pthread_exit(0);
+}
+
+void load_snapshot(char *filename) {
+	FILE *file_in;
+
+	file_in = fopen(filename, "r");
+	if (file_in == NULL) {
+		return;
+	}
+
+	char line[80];
+	int item_id, score;
+	pthread_mutex_lock(&scores_mutex);
+	while(fgets(line, 80, file_in) != NULL) {
+		sscanf(line, "%d %d", &item_id, &score);
+		items = Insert(item_id, score, items);
+		scores = promoteItem(scores, score, item_id, -1);
+		app_stats.items += 1;
+		printf("Loading %d with score %d\n", item_id, score);
+	}
+	pthread_mutex_unlock(&scores_mutex);
+	fclose(file_in);
+}
+
+void sync_to_disk(PoolNode *head, char *filename) {
+	int cur_char;
+	FILE *out_file;
+
+	remove(filename);
+
+	out_file = fopen(filename, "w");
+	if (out_file == NULL) {
+	    fprintf(stderr, "Can not open output file\n");
+	    exit (8);
+	}
+	
+	MemberNode *member;
+	while (head) {
+		member = head->members;
+		while (member) {
+			fprintf(out_file, "%d %d\n", member->item, head->score);
+			member = member->next;
+		}
+		head = head->next;
+	}
+
+	fclose(out_file);
+	return (0);
 }
