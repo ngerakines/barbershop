@@ -259,20 +259,18 @@ PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score) {
 	return NULL;
 }
 
-PoolNode *PeakNext(PoolNode *head, int *next_item) {
+void PeakNext(PoolNode *head, int *next_item) {
 	if (head == NULL) {
 		*next_item = -1;
-		return NULL;
+		return;
 	}
 	if (head->count == 1) {
 		*next_item = head->members->item;
-		return head->next;
+		return;
 	} else {
 		MemberNode *last = member_last(head->members);
 		*next_item = last->item;
-		assert(member_remove(head->members, last) == 0);
-		head->count -= 1;
-		return head;
+		return;
 	}
 }
 

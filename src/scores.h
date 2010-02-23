@@ -52,7 +52,7 @@ int find_item(int item, int query);
 
 PoolNode *preparePromotion(PoolNode *head, int item, int score);
 PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score);
-PoolNode *PeakNext(PoolNode *head, int *next_item);
+void PeakNext(PoolNode *head, int *next_item);
 PoolNode *NextItem(PoolNode *list, int *next_item);
 
 #ifdef DEBUG

@@ -75,7 +75,7 @@ START_TEST (test_scattered_adds) {
 	e = promoteItem(e, 7, 5002, -1);
 	e = promoteItem(e, 8, 5001, 5);
 	e = promoteItem(e, 1, 5003, -1);
-	sync_to_disk(e, "barbershop.dump");
+	// sync_to_disk(e, "barbershop.dump");
 	int next = -1;
 	e = NextItem(e, &next);
 	fail_unless(next == 5000);

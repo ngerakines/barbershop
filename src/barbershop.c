@@ -97,14 +97,14 @@ void on_read(int fd, short ev, void *arg) {
 	token_t tokens[MAX_TOKENS];
 	size_t ntokens = tokenize_command((char*)buf, tokens, MAX_TOKENS);
 	// TODO: Add support for the 'quit' command.
-	if (ntokens == 4 && strcmp(tokens[COMMAND_TOKEN].value, "update") == 0) {
+	if (ntokens == 4 && strcmp(tokens[COMMAND_TOKEN].value, "UPDATE") == 0) {
 		int item_id = atoi(tokens[KEY_TOKEN].value);
 		int score = atoi(tokens[VALUE_TOKEN].value);
 
 		// Score should probably be type-checked to assert that it really is
 		// an unsigned 32bit integer.
 		if (score < 1) {
-			reply(fd, "ERROR INVALID SCORE\r\n");
+			reply(fd, "-ERROR INVALID SCORE\r\n");
 			return;
 		}
 
@@ -128,16 +128,18 @@ void on_read(int fd, short ev, void *arg) {
 			pthread_mutex_unlock(&scores_mutex);
 		}
 		app_stats.updates += 1;
-		reply(fd, "OK\r\n");
-	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "peak") == 0) {
+		reply(fd, "+OK\r\n");
+	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "PEAK") == 0) {
+		printf("received a 'PEAK' command\n");
 		int next;
 		pthread_mutex_lock(&scores_mutex);
-		scores = PeakNext(scores, &next);
+		PeakNext(scores, &next);
 		pthread_mutex_unlock(&scores_mutex);
 		char msg[32];
-		sprintf(msg, "%d\r\n", next);
+		sprintf(msg, "+%d\r\n", next);
 		reply(fd, msg);
-	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "next") == 0) {
+	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "NEXT") == 0) {
+		printf("received a 'NEXT' command\n");
 		int next;
 		pthread_mutex_lock(&scores_mutex);
 		scores = NextItem(scores, &next);
@@ -150,21 +152,20 @@ void on_read(int fd, short ev, void *arg) {
 			app_stats.items -= 1;
 		}
 		char msg[32];
-		sprintf(msg, "%d\r\n", next);
+		sprintf(msg, "+%d\r\n", next);
 		reply(fd, msg);
-	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "stats") == 0) {
+	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "INFO") == 0) {
 		char out[128];
 		time_t current_time;
 		time(&current_time);
-		sprintf(out, "STAT uptime %d\r\n", (int)(current_time - app_stats.started_at)); reply(fd, out);
-		sprintf(out, "STAT version %s\r\n", app_stats.version); reply(fd, out);
-		sprintf(out, "STAT updates %d\r\n", app_stats.updates); reply(fd, out);
-		sprintf(out, "STAT items %d\r\n", app_stats.items); reply(fd, out);
-		sprintf(out, "STAT pools %d\r\n", app_stats.pools); reply(fd, out);
-		reply(fd, "END\r\n");
+		sprintf(out, "uptime:%d\r\n", (int)(current_time - app_stats.started_at)); reply(fd, out);
+		sprintf(out, "version:%s\r\n", app_stats.version); reply(fd, out);
+		sprintf(out, "updates:%d\r\n", app_stats.updates); reply(fd, out);
+		sprintf(out, "items:%d\r\n", app_stats.items); reply(fd, out);
+		sprintf(out, "pools:%d\r\n", app_stats.pools); reply(fd, out);
 		// pool_foreach(scores, pool_print);
 	} else {
-		reply(fd, "ERROR\r\n");
+		reply(fd, "-ERROR\r\n");
 	}
 }
 
