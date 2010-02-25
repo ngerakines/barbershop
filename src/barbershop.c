@@ -130,7 +130,6 @@ void on_read(int fd, short ev, void *arg) {
 		app_stats.updates += 1;
 		reply(fd, "+OK\r\n");
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "PEAK") == 0) {
-		printf("received a 'PEAK' command\n");
 		int next;
 		pthread_mutex_lock(&scores_mutex);
 		PeakNext(scores, &next);
@@ -139,7 +138,6 @@ void on_read(int fd, short ev, void *arg) {
 		sprintf(msg, "+%d\r\n", next);
 		reply(fd, msg);
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "NEXT") == 0) {
-		printf("received a 'NEXT' command\n");
 		int next;
 		pthread_mutex_lock(&scores_mutex);
 		scores = NextItem(scores, &next);
@@ -268,7 +266,7 @@ void load_snapshot(char *filename) {
 		items = Insert(item_id, score, items);
 		scores = promoteItem(scores, score, item_id, -1);
 		app_stats.items += 1;
-		printf("Loading %d with score %d\n", item_id, score);
+		// printf("Loading %d with score %d\n", item_id, score);
 	}
 	pthread_mutex_unlock(&scores_mutex);
 	fclose(file_in);

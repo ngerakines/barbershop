@@ -32,7 +32,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = barbershop$(EXEEXT) benchmark$(EXEEXT)
+bin_PROGRAMS = barbershop$(EXEEXT) client$(EXEEXT) benchmark$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -58,6 +58,12 @@ benchmark_LDADD = $(LDADD)
 benchmark_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(benchmark_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_client_OBJECTS = client-client.$(OBJEXT)
+client_OBJECTS = $(am_client_OBJECTS)
+client_LDADD = $(LDADD)
+client_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(client_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__depfiles_maybe = depfiles
@@ -70,8 +76,9 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(barbershop_SOURCES) $(benchmark_SOURCES)
-DIST_SOURCES = $(barbershop_SOURCES) $(benchmark_SOURCES)
+SOURCES = $(barbershop_SOURCES) $(benchmark_SOURCES) $(client_SOURCES)
+DIST_SOURCES = $(barbershop_SOURCES) $(benchmark_SOURCES) \
+	$(client_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -187,6 +194,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 barbershop_SOURCES = barbershop.c barbershop.h bst.c bst.h scores.c scores.h stats.h
 barbershop_CFLAGS = $(OPTIMIZATION) -Wall $(ARCH) $(PROF)
+client_SOURCES = client.c
+client_CFLAGS = $(OPTIMIZATION) -Wall $(ARCH) $(PROF)
 benchmark_SOURCES = benchmark.c
 benchmark_CFLAGS = $(OPTIMIZATION) -Wall $(ARCH) $(PROF)
 all: all-am
@@ -256,6 +265,9 @@ barbershop$(EXEEXT): $(barbershop_OBJECTS) $(barbershop_DEPENDENCIES)
 benchmark$(EXEEXT): $(benchmark_OBJECTS) $(benchmark_DEPENDENCIES) 
 	@rm -f benchmark$(EXEEXT)
 	$(benchmark_LINK) $(benchmark_OBJECTS) $(benchmark_LDADD) $(LIBS)
+client$(EXEEXT): $(client_OBJECTS) $(client_DEPENDENCIES) 
+	@rm -f client$(EXEEXT)
+	$(client_LINK) $(client_OBJECTS) $(client_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -267,6 +279,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/barbershop-bst.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/barbershop-scores.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/benchmark-benchmark.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/client-client.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -344,6 +357,20 @@ benchmark-benchmark.obj: benchmark.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='benchmark.c' object='benchmark-benchmark.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(benchmark_CFLAGS) $(CFLAGS) -c -o benchmark-benchmark.obj `if test -f 'benchmark.c'; then $(CYGPATH_W) 'benchmark.c'; else $(CYGPATH_W) '$(srcdir)/benchmark.c'; fi`
+
+client-client.o: client.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(client_CFLAGS) $(CFLAGS) -MT client-client.o -MD -MP -MF $(DEPDIR)/client-client.Tpo -c -o client-client.o `test -f 'client.c' || echo '$(srcdir)/'`client.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/client-client.Tpo $(DEPDIR)/client-client.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='client.c' object='client-client.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(client_CFLAGS) $(CFLAGS) -c -o client-client.o `test -f 'client.c' || echo '$(srcdir)/'`client.c
+
+client-client.obj: client.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(client_CFLAGS) $(CFLAGS) -MT client-client.obj -MD -MP -MF $(DEPDIR)/client-client.Tpo -c -o client-client.obj `if test -f 'client.c'; then $(CYGPATH_W) 'client.c'; else $(CYGPATH_W) '$(srcdir)/client.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/client-client.Tpo $(DEPDIR)/client-client.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='client.c' object='client-client.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(client_CFLAGS) $(CFLAGS) -c -o client-client.obj `if test -f 'client.c'; then $(CYGPATH_W) 'client.c'; else $(CYGPATH_W) '$(srcdir)/client.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
