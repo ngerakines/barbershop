@@ -30,12 +30,6 @@ Copyright (c) 2010 Nick Gerakines <nick at gerakines dot net>
 #include <signal.h>
 #include <unistd.h>
 
-const int UNKNOWN = 0;
-const int UPDATE = 1;
-const int NEXT = 2;
-const int PEAK = 3;
-const int INFO = 4;
-
 void send_command(int sd, char *command);
 
 int main(int argc, char **argv) {
@@ -117,6 +111,15 @@ int main(int argc, char **argv) {
 		action = 4;
 	}
 
+	if (strcmp(argv[optind], "score") == 0) {
+		if (argc - optind != 2) {
+			printf("The 'score' command requires 1 command parameter.\n");
+			printf("usage: client [--ip=] [--port=] score <item id>\n");
+			exit(1);
+		}
+		action = 5;
+	}
+
 	if (action == 0) {
 		printf("Invalid command given, should be either update, next, peak or info.\n");
 		printf("usage: client [--ip=] [--port=] <command> [... command arguments]\n");
@@ -166,6 +169,11 @@ int main(int argc, char **argv) {
 			break;
 		case 4:
 			send_command(sd, "INFO\r\n");
+			break;
+		case 5:
+			item_id = atoi(argv[optind + 1]);
+			sprintf(msg, "SCORE %d\r\n", item_id);
+			send_command(sd, msg);
 			break;
 		default:
 			break;

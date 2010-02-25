@@ -87,6 +87,18 @@ When there are no more items to return a '-1' is returned.
     C: NEXT\r\n
     S: +-1\r\n
 
+'SCORE <item id>'
+
+Return the score of a given item.
+
+    C: SCORE 61231\r\n
+    S: +5\r\n
+
+If the item does not exist or have a score then a '-1' is returned.
+
+    C: SCORE 61231\r\n
+    S: +-1\r\n
+
 'INFO'
 
 Return some server stats. This command deviates from the standard response
@@ -104,7 +116,3 @@ format by returning a list of key-value pairs separated by a ':'.
     S: updates:9742851\r\n
     S: items:2132931\r\n
     S: pools:47831\r\n
-
-# TODO
-
- * Add support for the 'GET' command which returns the priority of an item.

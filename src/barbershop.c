@@ -73,7 +73,7 @@ static size_t tokenize_command(char *command, token_t *tokens, const size_t max_
 
 void on_read(int fd, short ev, void *arg) {
 	struct client *client = (struct client *)arg;
-	char buf[64]; // largest possible command is 'update 2147483647 2147483647'
+	char buf[64];
 	int len = read(fd, buf, sizeof(buf));
 	if (len == 0) {
 		close(fd);
@@ -101,8 +101,11 @@ void on_read(int fd, short ev, void *arg) {
 		int item_id = atoi(tokens[KEY_TOKEN].value);
 		int score = atoi(tokens[VALUE_TOKEN].value);
 
-		// Score should probably be type-checked to assert that it really is
-		// an unsigned 32bit integer.
+		if (item_id == 0) {
+			reply(fd, "-ERROR INVALID ITEM ID\r\n");
+			return;
+		}
+
 		if (score < 1) {
 			reply(fd, "-ERROR INVALID SCORE\r\n");
 			return;
@@ -152,6 +155,20 @@ void on_read(int fd, short ev, void *arg) {
 		char msg[32];
 		sprintf(msg, "+%d\r\n", next);
 		reply(fd, msg);
+	} else if (ntokens == 3 && strcmp(tokens[COMMAND_TOKEN].value, "SCORE") == 0) {
+		int item_id = atoi(tokens[KEY_TOKEN].value);
+		if (item_id == 0) {
+			reply(fd, "-ERROR INVALID ITEM ID\r\n");
+			return;
+		}
+		Position lookup = Find(item_id, items);
+		if (lookup == NULL) {
+			reply(fd, "+-1\r\n");
+		} else {
+			char msg[32];
+			sprintf(msg, "+%d\r\n", lookup->score);
+			reply(fd, msg);
+		}
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "INFO") == 0) {
 		char out[128];
 		time_t current_time;

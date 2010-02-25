@@ -44,6 +44,7 @@ static zend_function_entry barbershop_functions[] = {
 	 PHP_ME(Barbershop, next, NULL, ZEND_ACC_PUBLIC)
 	 PHP_ME(Barbershop, peak, NULL, ZEND_ACC_PUBLIC)
 	 PHP_ME(Barbershop, update, NULL, ZEND_ACC_PUBLIC)
+	 PHP_ME(Barbershop, score, NULL, ZEND_ACC_PUBLIC)
 	 PHP_ME(Barbershop, info, NULL, ZEND_ACC_PUBLIC)
 	 PHP_MALIAS(Barbershop, open, connect, NULL, ZEND_ACC_PUBLIC)
 	 {NULL, NULL, NULL}
@@ -531,6 +532,33 @@ PHP_METHOD(Barbershop, update) {
 	}
 
 	cmd_len = barbershop_cmd_format(&cmd, "UPDATE %s %s\r\n", key, key_len, val, val_len);
+	if (barbershop_sock_write(barbershop_sock, cmd, cmd_len) < 0) {
+		efree(cmd);
+		RETURN_FALSE;
+	}
+	efree(cmd);
+
+	if ((response = barbershop_sock_read(barbershop_sock, &response_len TSRMLS_CC)) == NULL) {
+		RETURN_FALSE;
+	}
+	RETURN_STRINGL(response, response_len, 0);
+}
+
+PHP_METHOD(Barbershop, score) {
+	zval *object;
+	BarbershopSock *barbershop_sock;
+	char *key = NULL, *cmd, *response;
+	int key_len, cmd_len, response_len;
+
+	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os", &object, barbershop_ce, &key, &key_len) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	if (barbershop_sock_get(object, &barbershop_sock TSRMLS_CC) < 0) {
+		RETURN_FALSE;
+	}
+
+	cmd_len = barbershop_cmd_format(&cmd, "SCORE %s\r\n", key, key_len);
 	if (barbershop_sock_write(barbershop_sock, cmd, cmd_len) < 0) {
 		efree(cmd);
 		RETURN_FALSE;

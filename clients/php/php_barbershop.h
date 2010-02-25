@@ -26,10 +26,9 @@ THE SOFTWARE.
 PHP_METHOD(Barbershop, __construct);
 PHP_METHOD(Barbershop, connect);
 PHP_METHOD(Barbershop, close);
-PHP_METHOD(Barbershop, get);
-PHP_METHOD(Barbershop, set);
 PHP_METHOD(Barbershop, info);
 PHP_METHOD(Barbershop, update);
+PHP_METHOD(Barbershop, score);
 PHP_METHOD(Barbershop, next);
 PHP_METHOD(Barbershop, peak);
 
