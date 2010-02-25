@@ -207,7 +207,7 @@ void on_accept(int fd, short ev, void *arg) {
 
 int main(int argc, char **argv) {
 	int port = SERVER_PORT;
-	timeout = 60 * CLOCKS_PER_SEC;
+	timeout = 60;
 	static int daemon_mode = 0;
 
 	int c;
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
 				port = atoi(optarg);
 				break;
 			case 's':
-				timeout = atoi(optarg) * CLOCKS_PER_SEC;
+				timeout = atoi(optarg);
 				break;
 			case '?':
 				/* getopt_long already printed an error message. */
@@ -310,6 +310,7 @@ void reply(int fd, char *buffer) {
 
 void gc_thread() {
 	while (1) {
+		printf("[gc_thread] sleeping %d\n", timeout);
 		sleep(timeout);
 		pthread_mutex_lock(&scores_mutex);
 		sync_to_disk(scores, sync_file);
@@ -341,6 +342,7 @@ void load_snapshot(char *filename) {
 
 // TODO: Make these writes atomic (write to tmp, move tmp to file).
 void sync_to_disk(PoolNode *head, char *filename) {
+	printf("Syncing scores to file '%s'\n", filename);
 	FILE *out_file;
 
 	remove(filename);
