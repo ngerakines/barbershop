@@ -42,7 +42,7 @@ static zend_function_entry barbershop_functions[] = {
 	 PHP_ME(Barbershop, connect, NULL, ZEND_ACC_PUBLIC)
 	 PHP_ME(Barbershop, close, NULL, ZEND_ACC_PUBLIC)
 	 PHP_ME(Barbershop, next, NULL, ZEND_ACC_PUBLIC)
-	 PHP_ME(Barbershop, peak, NULL, ZEND_ACC_PUBLIC)
+	 PHP_ME(Barbershop, peek, NULL, ZEND_ACC_PUBLIC)
 	 PHP_ME(Barbershop, update, NULL, ZEND_ACC_PUBLIC)
 	 PHP_ME(Barbershop, score, NULL, ZEND_ACC_PUBLIC)
 	 PHP_ME(Barbershop, info, NULL, ZEND_ACC_PUBLIC)
@@ -598,7 +598,7 @@ PHP_METHOD(Barbershop, next) {
 	RETURN_STRINGL(response, response_len, 0);
 }
 
-PHP_METHOD(Barbershop, peak) {
+PHP_METHOD(Barbershop, peek) {
 	zval *object;
 	BarbershopSock *barbershop_sock;
 	char *key = NULL, *cmd, *response;
@@ -612,7 +612,7 @@ PHP_METHOD(Barbershop, peak) {
 		RETURN_FALSE;
 	}
 
-	cmd_len = spprintf(&cmd, 0, "PEAK\r\n");
+	cmd_len = spprintf(&cmd, 0, "PEEK\r\n");
 	if (barbershop_sock_write(barbershop_sock, cmd, cmd_len) < 0) {
 		efree(cmd);
 		RETURN_FALSE;

@@ -259,7 +259,7 @@ PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score) {
 	return NULL;
 }
 
-void PeakNext(PoolNode *head, int *next_item) {
+void PeekNext(PoolNode *head, int *next_item) {
 	if (head == NULL) {
 		*next_item = -1;
 		return;

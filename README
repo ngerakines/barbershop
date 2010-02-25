@@ -75,16 +75,16 @@ When there are no more items to return a '-1' is returned.
     C: NEXT\r\n
     S: +-1\r\n
 
-'PEAK'
+'PEEK'
 
 Return the next item in the queue without removing it from the queue.
 
-    C: NEXT\r\n
+    C: PEEK\r\n
     S: +61231\r\n
 
 When there are no more items to return a '-1' is returned.
 
-    C: NEXT\r\n
+    C: PEEK\r\n
     S: +-1\r\n
 
 'SCORE <item id>'

@@ -93,10 +93,10 @@ int main(int argc, char **argv) {
 		action = 2;
 	}
 
-	if (strcmp(argv[optind], "peak") == 0) {
+	if (strcmp(argv[optind], "peek") == 0) {
 		if (argc - optind != 1) {
-			printf("The 'peak' command requires 0 command parameters.\n");
-			printf("usage: client [--ip=] [--port=] peak\n");
+			printf("The 'peek' command requires 0 command parameters.\n");
+			printf("usage: client [--ip=] [--port=] peek\n");
 			exit(1);
 		}
 		action = 3;
@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (action == 0) {
-		printf("Invalid command given, should be either update, next, peak or info.\n");
+		printf("Invalid command given, should be either update, next, peek or info.\n");
 		printf("usage: client [--ip=] [--port=] <command> [... command arguments]\n");
 		exit(1);
 	}
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
 			send_command(sd, "NEXT\r\n");
 			break;
 		case 3:
-			send_command(sd, "PEAK\r\n");
+			send_command(sd, "PEEK\r\n");
 			break;
 		case 4:
 			send_command(sd, "INFO\r\n");

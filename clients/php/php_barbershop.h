@@ -30,7 +30,7 @@ PHP_METHOD(Barbershop, info);
 PHP_METHOD(Barbershop, update);
 PHP_METHOD(Barbershop, score);
 PHP_METHOD(Barbershop, next);
-PHP_METHOD(Barbershop, peak);
+PHP_METHOD(Barbershop, peek);
 
 #ifdef PHP_WIN32
 #define PHP_BARBERSHOP_API __declspec(dllexport)

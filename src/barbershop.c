@@ -132,10 +132,10 @@ void on_read(int fd, short ev, void *arg) {
 		}
 		app_stats.updates += 1;
 		reply(fd, "+OK\r\n");
-	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "PEAK") == 0) {
+	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "PEEK") == 0) {
 		int next;
 		pthread_mutex_lock(&scores_mutex);
-		PeakNext(scores, &next);
+		PeekNext(scores, &next);
 		pthread_mutex_unlock(&scores_mutex);
 		char msg[32];
 		sprintf(msg, "+%d\r\n", next);
