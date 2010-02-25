@@ -107,10 +107,4 @@ format by returning a list of key-value pairs separated by a ':'.
 
 # TODO
 
- * Add daemonize functionality.
- * Add command line options for:
-   * ip to bind to
-   * port to bind to
-   * to snapshot or not
-   * snapshot interval
  * Add support for the 'GET' command which returns the priority of an item.

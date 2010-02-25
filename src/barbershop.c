@@ -20,29 +20,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/time.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <err.h>
-#include <time.h>
 #include <assert.h>
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <netinet/in.h>
 #include <pthread.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "scores.h"
 #include "bst.h"
 #include "barbershop.h"
 #include "stats.h"
 #include <event.h>
-
-pthread_mutex_t scores_mutex;
 
 static size_t tokenize_command(char *command, token_t *tokens, const size_t max_tokens) {
 	char *s, *e;
@@ -189,10 +189,56 @@ void on_accept(int fd, short ev, void *arg) {
 }
 
 int main(int argc, char **argv) {
+	int port = SERVER_PORT;
+	timeout = 60 * CLOCKS_PER_SEC;
+	static int daemon_mode = 0;
+
+	int c;
+	while (1) {
+		static struct option long_options[] = {
+			{"daemon",  no_argument,       &daemon_mode, 1},
+			{"file",      required_argument, 0, 'f'},
+			{"port",    required_argument, 0, 'p'},
+			{"sync",    required_argument, 0, 's'},
+			{0, 0, 0, 0}
+		};
+		int option_index = 0;
+		c = getopt_long(argc, argv, "f:p:s:", long_options, &option_index);
+		if (c == -1) { break; }
+		switch (c) {
+			case 0:
+				if (long_options[option_index].flag != 0) { break; }
+				printf ("option %s", long_options[option_index].name);
+				if (optarg) { printf(" with arg %s", optarg); }
+				printf("\n");
+				break;
+			case 'f':
+				sync_file = optarg;
+				break;
+			case 'p':
+				port = atoi(optarg);
+				break;
+			case 's':
+				timeout = atoi(optarg) * CLOCKS_PER_SEC;
+				break;
+			case '?':
+				/* getopt_long already printed an error message. */
+				break;
+			default:
+				abort();
+		}
+	}
+	if (daemon_mode == 1) {
+		daemonize();
+	}
+	if (sync_file == NULL) {
+		sync_file = "barbershop.snapshot";
+	}
+
 	items = MakeEmpty(NULL);
 	scores = NULL;
 
-	load_snapshot("barbershop.snapshot");
+	load_snapshot(sync_file);
 
 	time(&app_stats.started_at);
 	app_stats.version = "00.01.00";
@@ -214,22 +260,27 @@ int main(int argc, char **argv) {
 	memset(&listen_addr, 0, sizeof(listen_addr));
 	listen_addr.sin_family = AF_INET;
 	listen_addr.sin_addr.s_addr = INADDR_ANY;
-	listen_addr.sin_port = htons(SERVER_PORT);
+	listen_addr.sin_port = htons(port);
 	if (bind(listen_fd, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0) { err(1, "bind failed"); }
 	if (listen(listen_fd, 5) < 0) { err(1, "listen failed"); }
 	if (setnonblock(listen_fd) < 0) { err(1, "failed to set server socket to non-blocking"); }
 	event_set(&ev_accept, listen_fd, EV_READ|EV_PERSIST, on_accept, NULL);
 	event_add(&ev_accept, NULL);
 	event_dispatch();
+
 	return 0;
 }
 
 int setnonblock(int fd) {
 	int flags;
 	flags = fcntl(fd, F_GETFL);
-	if (flags < 0) { return flags; }
+	if (flags < 0) {
+		return flags;
+	}
 	flags |= O_NONBLOCK;
-	if (fcntl(fd, F_SETFL, flags) < 0) { return -1; }
+	if (fcntl(fd, F_SETFL, flags) < 0) {
+		return -1;
+	}
 	return 0;
 }
 
@@ -242,9 +293,9 @@ void reply(int fd, char *buffer) {
 
 void gc_thread() {
 	while (1) {
-		sleep(60);
+		sleep(timeout);
 		pthread_mutex_lock(&scores_mutex);
-		sync_to_disk(scores, "barbershop.snapshot");
+		sync_to_disk(scores, sync_file);
 		pthread_mutex_unlock(&scores_mutex);
 	}
 	pthread_exit(0);
@@ -266,24 +317,23 @@ void load_snapshot(char *filename) {
 		items = Insert(item_id, score, items);
 		scores = promoteItem(scores, score, item_id, -1);
 		app_stats.items += 1;
-		// printf("Loading %d with score %d\n", item_id, score);
 	}
 	pthread_mutex_unlock(&scores_mutex);
 	fclose(file_in);
 }
 
+// TODO: Make these writes atomic (write to tmp, move tmp to file).
 void sync_to_disk(PoolNode *head, char *filename) {
-	int cur_char;
 	FILE *out_file;
 
 	remove(filename);
 
 	out_file = fopen(filename, "w");
 	if (out_file == NULL) {
-	    fprintf(stderr, "Can not open output file\n");
-	    exit (8);
+		fprintf(stderr, "Can not open output file\n");
+		exit (8);
 	}
-	
+
 	MemberNode *member;
 	while (head) {
 		member = head->members;
@@ -295,5 +345,64 @@ void sync_to_disk(PoolNode *head, char *filename) {
 	}
 
 	fclose(out_file);
-	return (0);
+	return;
+}
+
+void daemonize() {
+	int i,lfp;
+	char str[10];
+
+	/* already a daemon */
+	if (getppid() == 1) {
+		return;
+	}
+
+	i = fork();
+	if (i < 0) { /* fork error */
+		exit(1);
+	}
+
+	if (i > 0) { /* parent exits */
+		exit(0);
+	}
+
+	setsid();
+	for (i = getdtablesize(); i >= 0; --i) { /* close all descriptors */
+		close(i);
+	}
+	i = open("/dev/null", O_RDWR);
+	dup(i);
+	dup(i);
+	umask(027);
+	chdir(RUNNING_DIR);
+
+	lfp = open(LOCK_FILE,O_RDWR|O_CREAT,0640);
+	if (lfp < 0) {
+		exit(1);
+	}
+	if (lockf(lfp, F_TLOCK, 0) < 0) {
+		exit(0);
+	}
+
+	sprintf(str, "%d\n", getpid());
+	write(lfp, str, strlen(str));
+
+	signal(SIGCHLD, SIG_IGN);
+	signal(SIGTSTP, SIG_IGN);
+	signal(SIGTTOU, SIG_IGN);
+	signal(SIGTTIN, SIG_IGN);
+	signal(SIGHUP, signal_handler); /* catch hangup signal */
+	signal(SIGTERM, signal_handler); /* catch kill signal */
+}
+
+void signal_handler(int sig) {
+	switch(sig) {
+		case SIGHUP:
+			// Log this somewhere ...
+			break;
+		case SIGTERM:
+			// Log this somewhere ...
+			exit(0);
+			break;
+	}
 }
