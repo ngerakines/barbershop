@@ -165,6 +165,8 @@ int main(int argc, char **argv) {
 			send_command(sd, "PEAK\r\n");
 			break;
 		case 4:
+			send_command(sd, "INFO\r\n");
+			break;
 		default:
 			break;
 	}
@@ -179,9 +181,9 @@ void send_command(int sd, char *command) {
 		perror("send");
 		exit(1);
 	}
-	char buf[300];
+	char buf[1024];
 	int numbytes;
-	if((numbytes = recv(sd, buf, 300-1, 0)) == -1) {
+	if((numbytes = recv(sd, buf, 1024-1, 0)) == -1) {
 		perror("recv()");
 		exit(1);
 	}
@@ -206,7 +208,8 @@ void send_command(int sd, char *command) {
 			}
 			break;
 		default:
-			printf("protocol error, got '%c' as reply type byte\n", buf[0]);
+			printf("%s\n", buf);
+			// printf("protocol error, got '%c' as reply type byte\n", buf[0]);
 			break;
 	}
 }

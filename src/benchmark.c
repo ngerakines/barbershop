@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
 	n = 0;
 	while (n < 1000) {
 		char msg[32];
-		sprintf(msg, "update %d 1\r\n", list[n]);
+		sprintf(msg, "UPDATE %d 1\r\n", list[n]);
 		printf("Sending command 'update %d 1' ... ", list[n]);
 		send_command(sd, msg);
 		n++;
