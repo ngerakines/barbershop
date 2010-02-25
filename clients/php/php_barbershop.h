@@ -91,6 +91,6 @@ PHPAPI void barbershop_atomic_increment(INTERNAL_FUNCTION_PARAMETERS, char *keyw
 ZEND_BEGIN_MODULE_GLOBALS(barbershop)
 ZEND_END_MODULE_GLOBALS(barbershop)
 
-#define PHP_BARBERSHOP_VERSION "0.1"
+#define PHP_BARBERSHOP_VERSION "0.2.1"
 
 #endif

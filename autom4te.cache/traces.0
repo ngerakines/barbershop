@@ -2382,8 +2382,13 @@ m4trace:configure.ac:43: -1- m4_pattern_allow([^HAVE_MALLOC$])
 m4trace:configure.ac:43: -1- m4_pattern_allow([^HAVE_MALLOC$])
 m4trace:configure.ac:43: -1- m4_pattern_allow([^LIB@&t@OBJS$])
 m4trace:configure.ac:43: -1- m4_pattern_allow([^malloc$])
-m4trace:configure.ac:52: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:52: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:52: -1- _AC_AM_CONFIG_HEADER_HOOK([$ac_file])
-m4trace:configure.ac:52: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:52: -1- _LT_PROG_LTMAIN
+m4trace:configure.ac:55: -1- AM_CONDITIONAL([GCOV], [test x"$gcov" = "xtrue"])
+m4trace:configure.ac:55: -1- m4_pattern_allow([^GCOV_TRUE$])
+m4trace:configure.ac:55: -1- m4_pattern_allow([^GCOV_FALSE$])
+m4trace:configure.ac:55: -1- _AM_SUBST_NOTMAKE([GCOV_TRUE])
+m4trace:configure.ac:55: -1- _AM_SUBST_NOTMAKE([GCOV_FALSE])
+m4trace:configure.ac:65: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:65: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:65: -1- _AC_AM_CONFIG_HEADER_HOOK([$ac_file])
+m4trace:configure.ac:65: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:65: -1- _LT_PROG_LTMAIN

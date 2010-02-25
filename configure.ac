@@ -2,7 +2,7 @@
 
 # Prelude.
 AC_PREREQ([2.59])
-AC_INIT([Barbershop], [0.1], [nick AT gerakines dot net])
+AC_INIT([Barbershop], [0.2.1], [nick at gerakines dot net])
 
 # unique source file --- primitive safety check 
 AC_CONFIG_SRCDIR([src/barbershop.c])
