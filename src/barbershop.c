@@ -178,7 +178,6 @@ void on_read(int fd, short ev, void *arg) {
 		sprintf(out, "updates:%d\r\n", app_stats.updates); reply(fd, out);
 		sprintf(out, "items:%d\r\n", app_stats.items); reply(fd, out);
 		sprintf(out, "pools:%d\r\n", app_stats.pools); reply(fd, out);
-		// pool_foreach(scores, pool_print);
 	} else {
 		reply(fd, "-ERROR\r\n");
 	}
@@ -310,7 +309,6 @@ void reply(int fd, char *buffer) {
 
 void gc_thread() {
 	while (1) {
-		printf("[gc_thread] sleeping %d\n", timeout);
 		sleep(timeout);
 		pthread_mutex_lock(&scores_mutex);
 		sync_to_disk(scores, sync_file);
@@ -342,7 +340,6 @@ void load_snapshot(char *filename) {
 
 // TODO: Make these writes atomic (write to tmp, move tmp to file).
 void sync_to_disk(PoolNode *head, char *filename) {
-	printf("Syncing scores to file '%s'\n", filename);
 	FILE *out_file;
 
 	remove(filename);
