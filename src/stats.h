@@ -32,12 +32,8 @@ struct _app_stats {
 	unsigned int updates;
 	// Number of items created/inserted into `items`
 	unsigned int items;
-	// Number of items created/inserted into `items` that reflects successful `next` calls
-	unsigned int items_gc;
 	// Number of created pools
 	unsigned int pools;
-	// Number of pools that reflects successful `next` calls that empty pools
-	unsigned int pools_gc;
 } app_stats;
 
 #endif

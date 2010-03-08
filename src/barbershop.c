@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -175,9 +176,9 @@ void on_read(int fd, short ev, void *arg) {
 		time(&current_time);
 		sprintf(out, "uptime:%d\r\n", (int)(current_time - app_stats.started_at)); reply(fd, out);
 		sprintf(out, "version:%s\r\n", app_stats.version); reply(fd, out);
-		sprintf(out, "updates:%d\r\n", app_stats.updates); reply(fd, out);
-		sprintf(out, "items:%d\r\n", app_stats.items); reply(fd, out);
-		sprintf(out, "pools:%d\r\n", app_stats.pools); reply(fd, out);
+		sprintf(out, "updates:%u\r\n", app_stats.updates); reply(fd, out);
+		sprintf(out, "items:%u\r\n", app_stats.items); reply(fd, out);
+		sprintf(out, "pools:%u\r\n", app_stats.pools); reply(fd, out);
 	} else {
 		reply(fd, "-ERROR\r\n");
 	}

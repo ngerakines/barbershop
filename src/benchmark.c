@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 		send_command(sd, msg);
 		n++;
 	}
-	send_command(sd, "stats\r\n");
+	send_command(sd, "INFO\r\n");
 
 	close(sd);
 

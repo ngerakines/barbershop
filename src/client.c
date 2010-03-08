@@ -208,7 +208,6 @@ void send_command(int sd, char *command) {
 			if (buf_len >= 2) {
 				resp = malloc(1 + buf_len);
 				memcpy(resp, buf+1, buf_len);
-				resp[buf_len] = 0;
 				printf("%s\n", resp);
 				free(resp);
 			} else {
@@ -217,7 +216,6 @@ void send_command(int sd, char *command) {
 			break;
 		default:
 			printf("%s\n", buf);
-			// printf("protocol error, got '%c' as reply type byte\n", buf[0]);
 			break;
 	}
 }
