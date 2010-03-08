@@ -44,33 +44,7 @@ THE SOFTWARE.
 #include "barbershop.h"
 #include "stats.h"
 #include <event.h>
-
-static size_t tokenize_command(char *command, token_t *tokens, const size_t max_tokens) {
-	char *s, *e;
-	size_t ntokens = 0;
-	for (s = e = command; ntokens < max_tokens - 1; ++e) {
-		if (*e == ' ') {
-			if (s != e) {
-				tokens[ntokens].value = s;
-				tokens[ntokens].length = e - s;
-				ntokens++;
-				*e = '\0';
-			}
-			s = e + 1;
-		} else if (*e == '\0') {
-			if (s != e) {
-				tokens[ntokens].value = s;
-				tokens[ntokens].length = e - s;
-				ntokens++;
-			}
-			break;
-		}
-	}
-	tokens[ntokens].value =  *e == '\0' ? NULL : e;
-	tokens[ntokens].length = 0;
-	ntokens++;
-	return ntokens;
-}
+#include "commands.h"
 
 void on_read(int fd, short ev, void *arg) {
 	struct client *client = (struct client *)arg;
@@ -88,100 +62,7 @@ void on_read(int fd, short ev, void *arg) {
 		free(client);
 		return;
 	}
-	// TOOD: Find a better way to do this {
-	char* nl;
-	nl = strrchr(buf, '\r');
-	if (nl) { *nl = '\0'; }
-	nl = strrchr(buf, '\n');
-	if (nl) { *nl = '\0'; }
-	// }
-	token_t tokens[MAX_TOKENS];
-	size_t ntokens = tokenize_command((char*)buf, tokens, MAX_TOKENS);
-	// TODO: Add support for the 'quit' command.
-	if (ntokens == 4 && strcmp(tokens[COMMAND_TOKEN].value, "UPDATE") == 0) {
-		int item_id = atoi(tokens[KEY_TOKEN].value);
-		int score = atoi(tokens[VALUE_TOKEN].value);
-
-		if (item_id == 0) {
-			reply(fd, "-ERROR INVALID ITEM ID\r\n");
-			return;
-		}
-
-		if (score < 1) {
-			reply(fd, "-ERROR INVALID SCORE\r\n");
-			return;
-		}
-
-		Position lookup = Find(item_id, items);
-		if (lookup == NULL) {
-			items = Insert(item_id, score, items);
-			pthread_mutex_lock(&scores_mutex);
-			scores = promoteItem(scores, score, item_id, -1);
-			pthread_mutex_unlock(&scores_mutex);
-			app_stats.items += 1;
-		} else {
-			int old_score = lookup->score;
-			if (old_score == -1) {
-				lookup->score = 1;
-			} else {
-				lookup->score += score;
-			}
-			assert(lookup->score > old_score);
-			pthread_mutex_lock(&scores_mutex);
-			scores = promoteItem(scores, lookup->score, item_id, old_score);
-			pthread_mutex_unlock(&scores_mutex);
-		}
-		app_stats.updates += 1;
-		reply(fd, "+OK\r\n");
-	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "PEEK") == 0) {
-		int next;
-		pthread_mutex_lock(&scores_mutex);
-		PeekNext(scores, &next);
-		pthread_mutex_unlock(&scores_mutex);
-		char msg[32];
-		sprintf(msg, "+%d\r\n", next);
-		reply(fd, msg);
-	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "NEXT") == 0) {
-		int next;
-		pthread_mutex_lock(&scores_mutex);
-		scores = NextItem(scores, &next);
-		pthread_mutex_unlock(&scores_mutex);
-		if (next != -1) {
-			Position lookup = Find( next, items );
-			if (lookup != NULL) {
-				lookup->score = -1;
-			}
-			app_stats.items -= 1;
-		}
-		char msg[32];
-		sprintf(msg, "+%d\r\n", next);
-		reply(fd, msg);
-	} else if (ntokens == 3 && strcmp(tokens[COMMAND_TOKEN].value, "SCORE") == 0) {
-		int item_id = atoi(tokens[KEY_TOKEN].value);
-		if (item_id == 0) {
-			reply(fd, "-ERROR INVALID ITEM ID\r\n");
-			return;
-		}
-		Position lookup = Find(item_id, items);
-		if (lookup == NULL) {
-			reply(fd, "+-1\r\n");
-		} else {
-			char msg[32];
-			sprintf(msg, "+%d\r\n", lookup->score);
-			reply(fd, msg);
-		}
-	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "INFO") == 0) {
-		char out[128];
-		time_t current_time;
-		time(&current_time);
-		sprintf(out, "uptime:%d\r\n", (int)(current_time - app_stats.started_at)); reply(fd, out);
-		sprintf(out, "version:%s\r\n", app_stats.version); reply(fd, out);
-		sprintf(out, "updates:%u\r\n", app_stats.updates); reply(fd, out);
-		sprintf(out, "items:%u\r\n", app_stats.items); reply(fd, out);
-		sprintf(out, "pools:%u\r\n", app_stats.pools); reply(fd, out);
-	} else {
-		reply(fd, "-ERROR\r\n");
-	}
+	process_request(fd, buf);
 }
 
 void on_accept(int fd, short ev, void *arg) {
@@ -301,13 +182,6 @@ int setnonblock(int fd) {
 	return 0;
 }
 
-void reply(int fd, char *buffer) {
-	int n = write(fd, buffer, strlen(buffer));
-	if (n < 0 || n < strlen(buffer)) {
-		printf("ERROR writing to socket");
-	}
-}
-
 void gc_thread() {
 	while (1) {
 		sleep(timeout);
@@ -320,12 +194,10 @@ void gc_thread() {
 
 void load_snapshot(char *filename) {
 	FILE *file_in;
-
 	file_in = fopen(filename, "r");
 	if (file_in == NULL) {
 		return;
 	}
-
 	char line[80];
 	int item_id, score;
 	pthread_mutex_lock(&scores_mutex);
@@ -339,23 +211,18 @@ void load_snapshot(char *filename) {
 	fclose(file_in);
 }
 
-// TODO: Make these writes atomic (write to tmp, move tmp to file).
 void sync_to_disk(PoolNode *head, char *filename) {
 	FILE *out_file;
-
 	time_t now;
 	time(&now);
 	char tmp_file[32];
 	sprintf(tmp_file, "barbershop.%d.tmp", (int)now);
-
 	remove(tmp_file);
-
 	out_file = fopen(tmp_file, "w");
 	if (out_file == NULL) {
 		fprintf(stderr, "Can not open output file\n");
 		exit (8);
 	}
-
 	MemberNode *member;
 	while (head) {
 		member = head->members;
@@ -365,32 +232,25 @@ void sync_to_disk(PoolNode *head, char *filename) {
 		}
 		head = head->next;
 	}
-
 	fclose(out_file);
-
 	rename(tmp_file, filename);
-	
 	return;
 }
 
 void daemonize() {
 	int i,lfp;
 	char str[10];
-
 	/* already a daemon */
 	if (getppid() == 1) {
 		return;
 	}
-
 	i = fork();
 	if (i < 0) { /* fork error */
 		exit(1);
 	}
-
 	if (i > 0) { /* parent exits */
 		exit(0);
 	}
-
 	setsid();
 	for (i = getdtablesize(); i >= 0; --i) { /* close all descriptors */
 		close(i);
@@ -400,7 +260,6 @@ void daemonize() {
 	dup(i);
 	umask(027);
 	chdir(RUNNING_DIR);
-
 	lfp = open(LOCK_FILE,O_RDWR|O_CREAT,0640);
 	if (lfp < 0) {
 		exit(1);
@@ -408,10 +267,8 @@ void daemonize() {
 	if (lockf(lfp, F_TLOCK, 0) < 0) {
 		exit(0);
 	}
-
 	sprintf(str, "%d\n", getpid());
 	write(lfp, str, strlen(str));
-
 	signal(SIGCHLD, SIG_IGN);
 	signal(SIGTSTP, SIG_IGN);
 	signal(SIGTTOU, SIG_IGN);
@@ -420,13 +277,13 @@ void daemonize() {
 	signal(SIGTERM, signal_handler); /* catch kill signal */
 }
 
+// TODO: on SIGHUP import data from snapshot.
+// TODO: on SIGTERM exit.
 void signal_handler(int sig) {
 	switch(sig) {
 		case SIGHUP:
-			// Log this somewhere ...
 			break;
 		case SIGTERM:
-			// Log this somewhere ...
 			exit(0);
 			break;
 	}

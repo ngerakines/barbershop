@@ -46,7 +46,8 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_barbershop_OBJECTS = barbershop-barbershop.$(OBJEXT) \
-	barbershop-bst.$(OBJEXT) barbershop-scores.$(OBJEXT)
+	barbershop-bst.$(OBJEXT) barbershop-scores.$(OBJEXT) \
+	barbershop-commands.$(OBJEXT)
 barbershop_OBJECTS = $(am_barbershop_OBJECTS)
 barbershop_LDADD = $(LDADD)
 barbershop_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -192,7 +193,7 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-barbershop_SOURCES = barbershop.c barbershop.h bst.c bst.h scores.c scores.h stats.h
+barbershop_SOURCES = barbershop.c barbershop.h bst.c bst.h scores.c scores.h stats.h commands.c commands.h
 barbershop_CFLAGS = $(OPTIMIZATION) -Wall $(ARCH) $(PROF)
 client_SOURCES = client.c
 client_CFLAGS = $(OPTIMIZATION) -Wall $(ARCH) $(PROF)
@@ -277,6 +278,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/barbershop-barbershop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/barbershop-bst.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/barbershop-commands.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/barbershop-scores.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/benchmark-benchmark.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/client-client.Po@am__quote@
@@ -343,6 +345,20 @@ barbershop-scores.obj: scores.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='scores.c' object='barbershop-scores.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(barbershop_CFLAGS) $(CFLAGS) -c -o barbershop-scores.obj `if test -f 'scores.c'; then $(CYGPATH_W) 'scores.c'; else $(CYGPATH_W) '$(srcdir)/scores.c'; fi`
+
+barbershop-commands.o: commands.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(barbershop_CFLAGS) $(CFLAGS) -MT barbershop-commands.o -MD -MP -MF $(DEPDIR)/barbershop-commands.Tpo -c -o barbershop-commands.o `test -f 'commands.c' || echo '$(srcdir)/'`commands.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/barbershop-commands.Tpo $(DEPDIR)/barbershop-commands.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='commands.c' object='barbershop-commands.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(barbershop_CFLAGS) $(CFLAGS) -c -o barbershop-commands.o `test -f 'commands.c' || echo '$(srcdir)/'`commands.c
+
+barbershop-commands.obj: commands.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(barbershop_CFLAGS) $(CFLAGS) -MT barbershop-commands.obj -MD -MP -MF $(DEPDIR)/barbershop-commands.Tpo -c -o barbershop-commands.obj `if test -f 'commands.c'; then $(CYGPATH_W) 'commands.c'; else $(CYGPATH_W) '$(srcdir)/commands.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/barbershop-commands.Tpo $(DEPDIR)/barbershop-commands.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='commands.c' object='barbershop-commands.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(barbershop_CFLAGS) $(CFLAGS) -c -o barbershop-commands.obj `if test -f 'commands.c'; then $(CYGPATH_W) 'commands.c'; else $(CYGPATH_W) '$(srcdir)/commands.c'; fi`
 
 benchmark-benchmark.o: benchmark.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(benchmark_CFLAGS) $(CFLAGS) -MT benchmark-benchmark.o -MD -MP -MF $(DEPDIR)/benchmark-benchmark.Tpo -c -o benchmark-benchmark.o `test -f 'benchmark.c' || echo '$(srcdir)/'`benchmark.c

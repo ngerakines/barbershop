@@ -27,6 +27,13 @@ struct TreeNode;
 typedef struct TreeNode *Position;
 typedef struct TreeNode *SearchTree;
 
+struct TreeNode {
+	int item;
+	int score;
+	SearchTree  left;
+	SearchTree  right;
+};
+
 SearchTree MakeEmpty(SearchTree tree);
 Position Find(int key, SearchTree tree);
 Position FindMin(SearchTree tree);

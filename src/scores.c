@@ -229,12 +229,13 @@ PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score) {
 			newPool->next = list;
 			return newPool;
 		} else if (list->next == NULL && list->score > score) {
-			// There is only one member in the head and the head is larger than score, set head->next to newPool and return head
+			// There is only one member in the head and the head is larger
+			// than score, set head->next to newPool and return head.
 			list->next = newPool;
 			return list;
 		} else {
-			// There are more than two items in the list, find where to inject
-			// the new pool ... shit
+			// There are more than two items in the list, find where to
+			// create the new pool
 			PoolNode *head = list;
 			while (head) {
 				if (score < head->score) {
@@ -291,4 +292,3 @@ PoolNode *NextItem(PoolNode *head, int *next_item) {
 		return head;
 	}
 }
-

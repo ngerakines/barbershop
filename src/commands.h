@@ -20,37 +20,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#ifndef __BARBERSHOP_H__
-#define __BARBERSHOP_H__
+#ifndef __COMMANDS_H__
+#define __COMMANDS_H__
 
-#include <event.h>
+#define COMMAND_TOKEN		0
+#define SUBCOMMAND_TOKEN	1
+#define KEY_TOKEN			1
+#define VALUE_TOKEN			2
+#define MAX_TOKENS			8
 
-#define SERVER_PORT			8002
-#define RUNNING_DIR			"/tmp"
-#define LOCK_FILE			"barbershop.lock"
-#define LOG_FILE			"barbershop.log"
+typedef struct token_s {
+	char *value;
+	size_t length;
+} token_t;
 
-struct client {
-	struct event ev_read;
-};
-
-SearchTree items;
-PoolNode *scores;
-
-pthread_mutex_t scores_mutex;
-int timeout;
-char *sync_file;
-
-int main(int argc, char **argv);
-
-void on_read(int fd, short ev, void *arg);
-void on_accept(int fd, short ev, void *arg);
-int setnonblock(int fd);
-void gc_thread();
-void load_snapshot(char *filename);
-void sync_to_disk(PoolNode *head, char *filename);
-
-void daemonize();
-void signal_handler(int sig);
+void command_update(int fd, token_t *tokens);
+void command_next(int fd, token_t *tokens);
+void command_peek(int fd, token_t *tokens);
+void command_score(int fd, token_t *tokens);
+void command_info(int fd, token_t *tokens);
+void process_request(int fd, char *input);
+size_t tokenize_command(char *command, token_t *tokens, const size_t max_tokens);
+void reply(int fd, char *buffer);
 
 #endif
