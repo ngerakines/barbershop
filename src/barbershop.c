@@ -343,9 +343,14 @@ void load_snapshot(char *filename) {
 void sync_to_disk(PoolNode *head, char *filename) {
 	FILE *out_file;
 
-	remove(filename);
+	time_t now;
+	time(&now);
+	char tmp_file[32];
+	sprintf(tmp_file, "barbershop.%d.tmp", (int)now);
 
-	out_file = fopen(filename, "w");
+	remove(tmp_file);
+
+	out_file = fopen(tmp_file, "w");
 	if (out_file == NULL) {
 		fprintf(stderr, "Can not open output file\n");
 		exit (8);
@@ -362,6 +367,9 @@ void sync_to_disk(PoolNode *head, char *filename) {
 	}
 
 	fclose(out_file);
+
+	rename(tmp_file, filename);
+	
 	return;
 }
 
