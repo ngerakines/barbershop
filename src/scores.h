@@ -23,40 +23,45 @@ THE SOFTWARE.
 #ifndef __SCORES_H__
 #define __SCORES_H__
 
-typedef struct node_member {
+struct node_member;
+struct node_pool;
+typedef struct node_member *MemberNode;
+typedef struct node_pool *PoolNode;
+
+struct node_member {
 	int item;
-	struct node_member *next;
-} MemberNode;
+	MemberNode next;
+};
 
-typedef struct node_pool {
+struct node_pool {
 	int score;
-	struct node_member *members;
+	MemberNode members;
 	int count;
-	struct node_pool *next;
-} PoolNode;
+	PoolNode next;
+};
 
-PoolNode *pool_create(int score);
-int pool_remove(PoolNode *list, PoolNode *node);
-int pool_foreach(PoolNode *node, int(*func)(int, int, MemberNode*));
-PoolNode *pool_find(PoolNode *node, int(*func)(int, MemberNode*, int), int data);
+PoolNode pool_create(int score);
+int pool_remove(PoolNode list, PoolNode node);
+int pool_foreach(PoolNode node, int(*func)(int, int, MemberNode));
+PoolNode pool_find(PoolNode node, int(*func)(int, MemberNode, int), int data);
 
-MemberNode *member_create(int item);
-MemberNode *member_push(MemberNode *list, int item);
-int member_remove(MemberNode *list, MemberNode *node);
-int member_foreach(MemberNode *node, int(*func)(int));
-MemberNode *member_find(MemberNode *node, int(*func)(int, int), int data);
-MemberNode *member_last(MemberNode *node);
+MemberNode member_create(int item);
+MemberNode member_push(MemberNode list, int item);
+int member_remove(MemberNode list, MemberNode node);
+int member_foreach(MemberNode node, int(*func)(int));
+MemberNode member_find(MemberNode node, int(*func)(int, int), int data);
+MemberNode member_last(MemberNode node);
 
-int find_by_score(int score, MemberNode *members, int query);
+int find_by_score(int score, MemberNode members, int query);
 int find_item(int item, int query);
 
-PoolNode *preparePromotion(PoolNode *head, int item, int score);
-PoolNode *promoteItem(PoolNode *list, int score, int item, int old_score);
-void PeekNext(PoolNode *head, int *next_item);
-PoolNode *NextItem(PoolNode *list, int *next_item);
+PoolNode preparePromotion(PoolNode head, int item, int score);
+PoolNode promoteItem(PoolNode list, int score, int item, int old_score);
+void PeekNext(PoolNode head, int *next_item);
+PoolNode NextItem(PoolNode list, int *next_item);
 
 #ifdef DEBUG
-int pool_print(int score, int count, MemberNode *members);
+int pool_print(int score, int count, MemberNode members);
 int member_print(int item);
 #endif
 

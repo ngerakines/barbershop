@@ -131,7 +131,11 @@ int main(int argc, char **argv) {
 		send_command(sd, msg);
 		n++;
 	}
-	send_command(sd, "INFO\r\n");
+	n = 0;
+	while (n < 500) {
+		send_command(sd, "NEXT\r\n");
+		n++;
+	}
 
 	close(sd);
 

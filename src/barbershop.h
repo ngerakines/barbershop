@@ -35,7 +35,7 @@ struct client {
 };
 
 SearchTree items;
-PoolNode *scores;
+PoolNode scores;
 
 pthread_mutex_t scores_mutex;
 int timeout;
@@ -48,7 +48,7 @@ void on_accept(int fd, short ev, void *arg);
 int setnonblock(int fd);
 void gc_thread();
 void load_snapshot(char *filename);
-void sync_to_disk(PoolNode *head, char *filename);
+void sync_to_disk(PoolNode head, char *filename);
 
 void daemonize();
 void signal_handler(int sig);

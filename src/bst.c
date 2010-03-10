@@ -77,6 +77,7 @@ SearchTree Insert(int key, int score, SearchTree tree ) {
 	if ( tree == NULL) {
 		tree = malloc( sizeof( struct TreeNode ) );
 		if (tree == NULL ) {
+			exit(1);
 			// FatalError( "Out of space!!!" );
 		} else {
 			tree->item = key;

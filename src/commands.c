@@ -94,7 +94,6 @@ void command_next(int fd, token_t *tokens) {
 	char msg[32];
 	sprintf(msg, "+%d\r\n", next);
 	reply(fd, msg);
-	
 }
 
 void command_peek(int fd, token_t *tokens) {
@@ -144,6 +143,7 @@ void process_request(int fd, char *input) {
 	if (nl) { *nl = '\0'; }
 	token_t tokens[MAX_TOKENS];
 	size_t ntokens = tokenize_command(input, tokens, MAX_TOKENS);
+	printf("command received: %s\n", tokens[COMMAND_TOKEN].value);
 	if (ntokens == 4 && strcmp(tokens[COMMAND_TOKEN].value, "UPDATE") == 0) {
 		command_update(fd, tokens);
 	} else if (ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "PEEK") == 0) {

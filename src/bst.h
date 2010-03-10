@@ -30,8 +30,8 @@ typedef struct TreeNode *SearchTree;
 struct TreeNode {
 	int item;
 	int score;
-	SearchTree  left;
-	SearchTree  right;
+	SearchTree left;
+	SearchTree right;
 };
 
 SearchTree MakeEmpty(SearchTree tree);

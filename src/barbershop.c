@@ -211,7 +211,7 @@ void load_snapshot(char *filename) {
 	fclose(file_in);
 }
 
-void sync_to_disk(PoolNode *head, char *filename) {
+void sync_to_disk(PoolNode head, char *filename) {
 	FILE *out_file;
 	time_t now;
 	time(&now);
@@ -223,7 +223,7 @@ void sync_to_disk(PoolNode *head, char *filename) {
 		fprintf(stderr, "Can not open output file\n");
 		exit (8);
 	}
-	MemberNode *member;
+	MemberNode member;
 	while (head) {
 		member = head->members;
 		while (member) {
