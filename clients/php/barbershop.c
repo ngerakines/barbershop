@@ -235,7 +235,7 @@ PHPAPI int barbershop_sock_server_open(BarbershopSock *barbershop_sock, int forc
 PHPAPI int barbershop_sock_disconnect(BarbershopSock *barbershop_sock TSRMLS_DC) {
 	int res = 0;
 	if (barbershop_sock->stream != NULL) {
-		barbershop_sock_write(barbershop_sock, "QUIT", sizeof("QUIT") - 1);
+		//barbershop_sock_write(barbershop_sock, "QUIT", sizeof("QUIT") - 1);
 		barbershop_sock->status = BARBERSHOP_SOCK_STATUS_DISCONNECTED;
 		php_stream_close(barbershop_sock->stream);
 		barbershop_sock->stream = NULL;
