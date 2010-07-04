@@ -28,7 +28,8 @@ AC_CHECK_LIB([pthread], [pthread_create])
 # CHECK_LIBS accordingly.  
 #  AM_PATH_CHECK([MINIMUM-VERSION,
 #                [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
-AM_PATH_CHECK()
+# AM_PATH_CHECK()
+PKG_CHECK_MODULES([CHECK], [check >= 0.8.2])
 
 LIBEVENT_URL=http://www.monkey.org/~provos/libevent/
 AC_CHECK_LIB(event, event_set, , [AC_MSG_ERROR(libevent is required.  You can get it from $LIBEVENT_URL)])

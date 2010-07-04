@@ -1,4 +1,6 @@
 /*
+ Modified by Dwayn Matthies <dwayn(dot)matthies(at)gmail(dot)com>
+ to use pqueue.h to handle the priority queue
 Copyright (c) 2010 Nick Gerakines <nick at gerakines dot net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

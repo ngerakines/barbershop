@@ -39,14 +39,14 @@ THE SOFTWARE.
 #include <time.h>
 #include <unistd.h>
 
-#include "scores.h"
-#include "bst.h"
+#include "pqueue.h"
 #include "barbershop.h"
 #include "stats.h"
 #include <event.h>
 #include "commands.h"
 
-void on_read(int fd, short ev, void *arg) {
+void on_read(int fd, short ev, void *arg)
+{
 	struct client *client = (struct client *)arg;
 	char buf[64];
 	int len = read(fd, buf, sizeof(buf));
@@ -65,7 +65,8 @@ void on_read(int fd, short ev, void *arg) {
 	process_request(fd, buf);
 }
 
-void on_accept(int fd, short ev, void *arg) {
+void on_accept(int fd, short ev, void *arg)
+{
 	int client_fd;
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
@@ -86,7 +87,8 @@ void on_accept(int fd, short ev, void *arg) {
 	event_add(&client->ev_read, NULL);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 	int port = SERVER_PORT;
 	timeout = 60;
 	static int daemon_mode = 0;
@@ -133,9 +135,8 @@ int main(int argc, char **argv) {
 		sync_file = "barbershop.snapshot";
 	}
 
-	items = MakeEmpty(NULL);
-	scores = NULL;
-
+	initializePriorityQueue();
+	
 	load_snapshot(sync_file);
 
 	time(&app_stats.started_at);
@@ -169,7 +170,8 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-int setnonblock(int fd) {
+int setnonblock(int fd)
+{
 	int flags;
 	flags = fcntl(fd, F_GETFL);
 	if (flags < 0) {
@@ -182,36 +184,43 @@ int setnonblock(int fd) {
 	return 0;
 }
 
-void gc_thread() {
+void gc_thread()
+{
 	while (1) {
 		sleep(timeout);
 		pthread_mutex_lock(&scores_mutex);
-		sync_to_disk(scores, sync_file);
+		sync_to_disk(sync_file);
 		pthread_mutex_unlock(&scores_mutex);
 	}
 	pthread_exit(0);
 }
 
-void load_snapshot(char *filename) {
+void load_snapshot(char *filename)
+{
 	FILE *file_in;
 	file_in = fopen(filename, "r");
-	if (file_in == NULL) {
+	if (file_in == NULL)
+	{
 		return;
 	}
 	char line[80];
 	int item_id, score;
-	pthread_mutex_lock(&scores_mutex);
-	while(fgets(line, 80, file_in) != NULL) {
+	while(fgets(line, 80, file_in) != NULL)
+	{
 		sscanf(line, "%d %d", &item_id, &score);
-		items = Insert(item_id, score, items);
-		scores = promoteItem(scores, score, item_id, -1);
-		app_stats.items += 1;
+		pthread_mutex_lock(&scores_mutex);
+		int success = update(item_id, score);
+		if(success >= 0)
+			app_stats.updates += 1;
+		if(success == 1);
+			app_stats.items += 1;
+		pthread_mutex_unlock(&scores_mutex);
 	}
-	pthread_mutex_unlock(&scores_mutex);
 	fclose(file_in);
 }
 
-void sync_to_disk(PoolNode *head, char *filename) {
+void sync_to_disk(char *filename)
+{
 	FILE *out_file;
 	time_t now;
 	time(&now);
@@ -223,21 +232,14 @@ void sync_to_disk(PoolNode *head, char *filename) {
 		fprintf(stderr, "Can not open output file\n");
 		exit (8);
 	}
-	MemberNode *member;
-	while (head) {
-		member = head->members;
-		while (member) {
-			fprintf(out_file, "%d %d\n", member->item, head->score);
-			member = member->next;
-		}
-		head = head->next;
-	}
+	outputScores(out_file);
 	fclose(out_file);
 	rename(tmp_file, filename);
 	return;
 }
 
-void daemonize() {
+void daemonize()
+{
 	int i,lfp;
 	char str[10];
 	/* already a daemon */
@@ -270,6 +272,7 @@ void daemonize() {
 	sprintf(str, "%d\n", getpid());
 	write(lfp, str, strlen(str));
 	signal(SIGCHLD, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTSTP, SIG_IGN);
 	signal(SIGTTOU, SIG_IGN);
 	signal(SIGTTIN, SIG_IGN);
@@ -279,7 +282,8 @@ void daemonize() {
 
 // TODO: on SIGHUP import data from snapshot.
 // TODO: on SIGTERM exit.
-void signal_handler(int sig) {
+void signal_handler(int sig)
+{
 	switch(sig) {
 		case SIGHUP:
 			break;

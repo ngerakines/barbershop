@@ -34,9 +34,6 @@ struct client {
 	struct event ev_read;
 };
 
-SearchTree items;
-PoolNode *scores;
-
 pthread_mutex_t scores_mutex;
 int timeout;
 char *sync_file;
@@ -48,7 +45,7 @@ void on_accept(int fd, short ev, void *arg);
 int setnonblock(int fd);
 void gc_thread();
 void load_snapshot(char *filename);
-void sync_to_disk(PoolNode *head, char *filename);
+void sync_to_disk(char *filename);
 
 void daemonize();
 void signal_handler(int sig);

@@ -4,6 +4,24 @@ Barbershop is a fast, lightweight priority queue system. The goal is to
 create a dead simple network service with libevent to manage priority
 queue.
 
+# Dependencies
+check >= 0.8.2
+libevent >= 1.4.13
+pkgconfig >= 0.25 (possibly lower versions would work)
+
+# Compilitaion Notes
+
+Normally all that should be needed is to compile:
+./bootstrap.sh
+./configure
+make
+
+If there is issues with libtool versions when running make, you can run:
+libtoolize	[or glibtoolize]
+./bootstrap.sh
+./configure
+make
+ 
 # Usage
 
 This application exists to allow priority queue workers to scale out. The

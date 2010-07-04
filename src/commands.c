@@ -1,4 +1,6 @@
 /*
+ Modified by Dwayn Matthies <dwayn(dot)matthies(at)gmail(dot)com>
+ to use pqueue.h to handle the priority queue
 Copyright (c) 2010 Nick Gerakines <nick at gerakines dot net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,8 +42,7 @@ THE SOFTWARE.
 #include <unistd.h>
 
 #include "commands.h"
-#include "scores.h"
-#include "bst.h"
+#include "pqueue.h"
 #include "stats.h"
 #include "barbershop.h"
 
@@ -56,51 +57,32 @@ void command_update(int fd, token_t *tokens) {
 		reply(fd, "-ERROR INVALID SCORE\r\n");
 		return;
 	}
-	Position lookup = Find(item_id, items);
-	if (lookup == NULL) {
-		items = Insert(item_id, score, items);
-		pthread_mutex_lock(&scores_mutex);
-		scores = promoteItem(scores, score, item_id, -1);
-		pthread_mutex_unlock(&scores_mutex);
-		app_stats.items += 1;
-	} else {
-		int old_score = lookup->score;
-		if (old_score == -1) {
-			lookup->score = 1;
-		} else {
-			lookup->score += score;
-		}
-		assert(lookup->score > old_score);
-		pthread_mutex_lock(&scores_mutex);
-		scores = promoteItem(scores, lookup->score, item_id, old_score);
-		pthread_mutex_unlock(&scores_mutex);
-	}
-	app_stats.updates += 1;
-	reply(fd, "+OK\r\n");
+
+	pthread_mutex_lock(&scores_mutex);
+	int success = update(item_id, score);
+	pthread_mutex_unlock(&scores_mutex);
+
+	if(success >= 0)
+		reply(fd, "+OK\r\n");
+	else
+		reply(fd, "-ERROR UPDATE FAILED\r\n");
 }
 
 void command_next(int fd, token_t *tokens) {
 	int next;
 	pthread_mutex_lock(&scores_mutex);
-	scores = NextItem(scores, &next);
+	next = getNext();
 	pthread_mutex_unlock(&scores_mutex);
-	if (next != -1) {
-		Position lookup = Find( next, items );
-		if (lookup != NULL) {
-			lookup->score = -1;
-		}
-		app_stats.items -= 1;
-	}
+
 	char msg[32];
 	sprintf(msg, "+%d\r\n", next);
 	reply(fd, msg);
-	
 }
 
 void command_peek(int fd, token_t *tokens) {
 	int next;
 	pthread_mutex_lock(&scores_mutex);
-	PeekNext(scores, &next);
+	next = peekNext();
 	pthread_mutex_unlock(&scores_mutex);
 	char msg[32];
 	sprintf(msg, "+%d\r\n", next);
@@ -113,25 +95,23 @@ void command_score(int fd, token_t *tokens) {
 		reply(fd, "-ERROR INVALID ITEM ID\r\n");
 		return;
 	}
-	Position lookup = Find(item_id, items);
-	if (lookup == NULL) {
-		reply(fd, "+-1\r\n");
-	} else {
-		char msg[32];
-		sprintf(msg, "+%d\r\n", lookup->score);
-		reply(fd, msg);
-	}
+	int score = getScore(item_id);
+	char msg[32];
+	sprintf(msg, "+%d\r\n", score);
+	reply(fd, msg);
 }
 
 void command_info(int fd, token_t *tokens) {
 	char out[128];
 	time_t current_time;
 	time(&current_time);
+	pthread_mutex_lock(&scores_mutex);
 	sprintf(out, "uptime:%d\r\n", (int)(current_time - app_stats.started_at)); reply(fd, out);
 	sprintf(out, "version:%s\r\n", app_stats.version); reply(fd, out);
 	sprintf(out, "updates:%u\r\n", app_stats.updates); reply(fd, out);
 	sprintf(out, "items:%u\r\n", app_stats.items); reply(fd, out);
 	sprintf(out, "pools:%u\r\n", app_stats.pools); reply(fd, out);
+	pthread_mutex_unlock(&scores_mutex);
 }
 
 // TODO: Clean the '\r\n' scrub code.
