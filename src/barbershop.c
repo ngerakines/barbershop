@@ -45,6 +45,8 @@ THE SOFTWARE.
 #include <event.h>
 #include "commands.h"
 
+volatile sig_atomic_t respond_empty = 0;
+
 void on_read(int fd, short ev, void *arg)
 {
 	struct client *client = (struct client *)arg;
@@ -60,6 +62,11 @@ void on_read(int fd, short ev, void *arg)
 		close(fd);
 		event_del(&client->ev_read);
 		free(client);
+		return;
+	}
+	if(respond_empty == 1)
+	{
+		reply(fd, "-1\r\n");
 		return;
 	}
 	process_request(fd, buf);
@@ -135,18 +142,30 @@ int main(int argc, char **argv)
 		sync_file = "barbershop.snapshot";
 	}
 
+	// side snapshot file to hot load a snapshot by sending SIGHUP
+	int n = strlen(sync_file);
+	load_file = malloc(sizeof(char) * (n + 6));
+	sprintf(load_file, "%s.load", sync_file);
+
 	initializePriorityQueue();
-	
-	load_snapshot(sync_file);
 
 	time(&app_stats.started_at);
-	app_stats.version = "00.01.00";
+	app_stats.version = "00.02.01";
 	app_stats.updates = 0;
 	app_stats.items = 0;
 	app_stats.pools = 0;
 	
+	load_snapshot(sync_file);
+	signal(SIGCHLD, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGTSTP, SIG_IGN);
+	signal(SIGTTOU, SIG_IGN);
+	signal(SIGTTIN, SIG_IGN);
+	signal(SIGHUP, signal_handler); /* catch hangup signal */
+	signal(SIGTERM, signal_handler); /* catch kill signal */
+	
 	pthread_t garbage_collector;
-    pthread_create(&garbage_collector, NULL, (void *) gc_thread, NULL);
+	pthread_create(&garbage_collector, NULL, (void *) gc_thread, NULL);
 
 	int listen_fd;
 	struct sockaddr_in listen_addr;
@@ -195,12 +214,32 @@ void gc_thread()
 	pthread_exit(0);
 }
 
+void snap_thread()
+{
+	load_snapshot(load_file);
+	respond_empty = 0;
+	pthread_exit(0);
+}
+
+void write_thread()
+{
+	pthread_mutex_lock(&scores_mutex);
+	sync_to_disk(sync_file);
+	pthread_mutex_unlock(&scores_mutex);
+	respond_empty = 0;
+	exit(0);
+}
+
 void load_snapshot(char *filename)
 {
+	respond_empty = 1;
+	pthread_mutex_lock(&scores_mutex);
+	emptyPriorityQueue();
 	FILE *file_in;
 	file_in = fopen(filename, "r");
 	if (file_in == NULL)
 	{
+		pthread_mutex_unlock(&scores_mutex);
 		return;
 	}
 	char line[80];
@@ -208,15 +247,11 @@ void load_snapshot(char *filename)
 	while(fgets(line, 80, file_in) != NULL)
 	{
 		sscanf(line, "%d %d", &item_id, &score);
-		pthread_mutex_lock(&scores_mutex);
 		int success = update(item_id, score);
-		if(success >= 0)
-			app_stats.updates += 1;
-		if(success == 1);
-			app_stats.items += 1;
-		pthread_mutex_unlock(&scores_mutex);
 	}
 	fclose(file_in);
+	pthread_mutex_unlock(&scores_mutex);
+	respond_empty = 0;
 }
 
 void sync_to_disk(char *filename)
@@ -284,11 +319,17 @@ void daemonize()
 // TODO: on SIGTERM exit.
 void signal_handler(int sig)
 {
+	pthread_t sig_thread;
 	switch(sig) {
 		case SIGHUP:
+			respond_empty = 1;
+			pthread_create(&sig_thread, NULL, (void *) snap_thread, NULL);
+			signal(SIGHUP, signal_handler); /* catch hangup signal */
 			break;
 		case SIGTERM:
-			exit(0);
+			respond_empty = 1;
+			pthread_create(&sig_thread, NULL, (void *) write_thread, NULL);
+			signal(SIGTERM, signal_handler); /* catch hangup signal */
 			break;
 	}
 }

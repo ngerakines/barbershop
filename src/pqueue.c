@@ -60,6 +60,13 @@ int getNext()
 	return rval;
 }
 
+void emptyPriorityQueue()
+{
+	int r = getNext();
+	while(r > -1)
+		r = getNext();
+}
+
 int getScore(int itemId)
 {
 	ItemTreeNode itnode = findItem(itemId, item_root);
@@ -186,6 +193,7 @@ ItemNode createItemNode(int id)
 	node->itemId = id;
 	node->next = NULL;
 	node->prev = NULL;
+	app_stats.items += 1;
 	return node;
 }
 ItemTreeNode createItemTreeNode()
@@ -240,7 +248,6 @@ ItemTreeNode addItemTreeNode(ItemTreeNode tree, ItemTreeNode node)
 	if(tree == NULL)
 	{
 		tree = node;
-		app_stats.items += 1;
 	}
 	else
 	{
@@ -261,6 +268,7 @@ void deleteItemNode(ItemNode i)
 {
 	if(i->next == NULL && i->prev == NULL)
 	{
+		app_stats.items -= 1;
 		free(i);
 	}
 	else
@@ -343,7 +351,6 @@ ItemTreeNode deleteItemTreeNode(ItemTreeNode tree, ItemTreeNode node)
 			tree = tree->left;
 		}
 		free(TmpCell);
-		app_stats.items -= 1;
 	}
 
 	return tree;

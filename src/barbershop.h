@@ -37,6 +37,7 @@ struct client {
 pthread_mutex_t scores_mutex;
 int timeout;
 char *sync_file;
+char *load_file;
 
 int main(int argc, char **argv);
 
